@@ -1,17 +1,15 @@
-import dotenv from "dotenv"
-import { DataSource } from "typeorm"
+import { DataSource } from 'typeorm';
 
-class Database {
-    private database: DataSource
+class PostgreSQLDatabase {
+    private database: DataSource;
 
     constructor() {
-        dotenv.config()
-        this.initDatabase
+        this.initDatabase;
     }
 
     initDatabase(): void {
         const database = new DataSource({
-            type: "postgres",
+            type: 'postgres',
             host: process.env.HOST,
             port: Number(process.env.DB_PORT),
             username: process.env.DB_USERNAME,
@@ -22,13 +20,13 @@ class Database {
             entities: [],
             migrations: [],
             subscribers: [],
-        })
-        this.database = database
+        });
+        this.database = database;
     }
 
     get _database(): DataSource {
-        return this.database
+        return this.database;
     }
 }
 
-export default Database
+export default PostgreSQLDatabase;
