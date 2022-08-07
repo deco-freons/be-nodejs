@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Response } from 'express';
-import { Send } from 'express-serve-static-core';
 
 interface BaseResponseBody {
     statusCode: number;
@@ -7,7 +7,8 @@ interface BaseResponseBody {
     requestTime?: number;
 }
 
-interface BaseResponse<ResBody = BaseResponseBody, Locals extends Record<string, any> = Record<string, any>>
-    extends Response<ResBody, Locals> {}
+interface BaseLocals extends Record<string, any> {}
 
-export { BaseResponse, BaseResponseBody };
+interface BaseResponse<ResBody = BaseResponseBody, Locals = BaseLocals> extends Response<ResBody, Locals> {}
+
+export { BaseResponse, BaseResponseBody, BaseLocals };
