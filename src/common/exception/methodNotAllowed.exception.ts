@@ -1,8 +1,8 @@
 import BaseException from './base.exception';
 
 class MethodNotAllowedException extends BaseException {
-    constructor() {
-        super(405, 'Method Not Allowed');
+    constructor(message?: string) {
+        super(405, `Method Not Allowed. ${message}`);
     }
 }
 

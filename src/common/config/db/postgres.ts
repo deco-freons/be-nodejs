@@ -10,7 +10,7 @@ class PostgreSQLDatabase {
         this.connect();
     }
 
-    initDatabase(): void {
+    private initDatabase(): void {
         const database = new DataSource({
             type: 'postgres',
             host: process.env.HOST,

@@ -1,8 +1,8 @@
 import BaseException from './base.exception';
 
 class ForbiddenException extends BaseException {
-    constructor() {
-        super(403, 'Forbidden');
+    constructor(message?: string) {
+        super(403, `Forbidden. ${message}`);
     }
 }
 
