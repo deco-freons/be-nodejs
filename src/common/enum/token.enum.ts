@@ -4,6 +4,6 @@ export enum Token {
 }
 
 export enum TokenTTL {
-    ACCESS_TTL = 60 * 60,
-    REFRESH_TTL = 30 * 24 * 60 * 60,
+    ACCESS_TOKEN_TTL = 60 * 60,
+    REFRESH_TOKEN_TTL = 30 * 24 * 60 * 60,
 }

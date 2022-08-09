@@ -6,11 +6,11 @@ import Redis from '../../common/config/cache/redis';
 import BadRequestException from '../../common/exception/badRequest.exception';
 import UnauthorizedException from '../../common/exception/unauthorized.exception';
 import { compare, hash } from '../../common/utils/hash';
-import { TokenTTL } from '../../common/enum/token.enum';
 
 import User from '../entity/user.entity';
 import RegisterDTO from '../dto/register.dto';
 import LoginDTO from '../dto/login.dto';
+import RefreshTokenDTO from '../dto/refreshToken.dto';
 
 class AuthService implements BaseService {
     repository: Repository<ObjectLiteral>;
@@ -21,7 +21,7 @@ class AuthService implements BaseService {
 
     public register = async (body: RegisterDTO) => {
         try {
-            const queryBuilder = await this.repository.createQueryBuilder();
+            const queryBuilder = this.repository.createQueryBuilder();
 
             const user = await queryBuilder
                 .select(['user.userID'])
@@ -42,9 +42,8 @@ class AuthService implements BaseService {
                     password: hashedPassword,
                 })
                 .execute();
-            return 'User has been created, please check your email to verify your account';
+            return { message: 'User has been created, please check your email to verify your account' };
         } catch (error) {
-            console.log(error);
             throw error;
         }
     };
@@ -89,20 +88,82 @@ class AuthService implements BaseService {
                 birthDate: user.birthDate,
             };
 
-            const userID = user.userID;
             const userPayload = {
                 username: user.username,
                 email: user.email,
             };
-            const hashedID = await hash(String(userID));
-            const accessToken = await JWT.signAccessToken(userPayload);
-            const refreshToken = await JWT.signRefreshToken(userPayload);
-
-            Redis.set(hashedID, refreshToken);
-            Redis.expire(hashedID, TokenTTL.REFRESH_TTL);
+            const accessToken = JWT.signAccessToken(userPayload);
+            const refreshToken = JWT.signRefreshToken(userPayload);
 
             return { message: 'Login Successful', userData, accessToken, refreshToken };
         } catch (error) {
+            throw error;
+        }
+    };
+
+    public refreshToken = async (body: RefreshTokenDTO) => {
+        const refreshToken = body.refreshToken;
+
+        try {
+            const refreshTokenResponse = JWT.verifyRefreshToken(refreshToken);
+
+            const queryBuilder = this.repository.createQueryBuilder();
+            const user = await queryBuilder
+                .select(['user.userID', 'user.username', 'user.email'])
+                .from(User, 'user')
+                .where('user.username = :username', { username: refreshTokenResponse.username })
+                .orWhere('user.email = :email', { email: refreshTokenResponse.email })
+                .getOne();
+            if (!user) {
+                throw new UnauthorizedException('Invalid Token');
+            }
+
+            const refreshTokenRedis = await Redis.get(refreshToken);
+            if (refreshTokenRedis == refreshToken) {
+                throw new UnauthorizedException('Invalid Token');
+            }
+            Redis.set(refreshToken, refreshToken);
+
+            const userPayload = {
+                username: user.username,
+                email: user.email,
+            };
+            const accessTokenNew = JWT.signAccessToken(userPayload);
+            const refreshTokenNew = JWT.signRefreshToken(userPayload);
+
+            return { message: 'Success', accessTokenNew, refreshTokenNew };
+        } catch (error) {
+            Redis.set(refreshToken, refreshToken);
+            throw error;
+        }
+    };
+
+    public logout = async (body: RefreshTokenDTO) => {
+        const refreshToken = body.refreshToken;
+
+        try {
+            const refreshTokenResponse = JWT.verifyRefreshToken(refreshToken);
+
+            const queryBuilder = this.repository.createQueryBuilder();
+            const user = await queryBuilder
+                .select(['user.userID', 'user.username', 'user.email'])
+                .from(User, 'user')
+                .where('user.username = :username', { username: refreshTokenResponse.username })
+                .orWhere('user.email = :email', { email: refreshTokenResponse.email })
+                .getOne();
+            if (!user) {
+                throw new UnauthorizedException('Invalid Token');
+            }
+
+            const refreshTokenRedis = await Redis.get(refreshToken);
+            if (refreshTokenRedis == refreshToken) {
+                throw new UnauthorizedException('Invalid Token');
+            }
+            Redis.set(refreshToken, refreshToken);
+
+            return;
+        } catch (error) {
+            Redis.set(refreshToken, refreshToken);
             throw error;
         }
     };
