@@ -1,7 +1,7 @@
 import { NextFunction } from 'express';
 
-import BaseRequest from '../request/base.request';
 import BaseException from '../exception/base.exception';
+import { BaseRequest } from '../request/base.request';
 import { BaseResponse } from '../response/base.response';
 
 async function errorMiddleware(error: Error, _request: BaseRequest, response: BaseResponse, _next: NextFunction) {

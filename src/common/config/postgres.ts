@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
-import User from '../../../auth/entity/user.entity';
-import log from '../../logger/logger';
+import User from '../../auth/entity/user.entity';
+import log from '../logger/logger';
 
 class PostgreSQLDatabase {
     private database: DataSource;

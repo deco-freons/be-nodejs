@@ -1,8 +1,8 @@
 import express from 'express';
 import { DataSource } from 'typeorm';
 
-import PostgreSQLDatabase from './common/config/db/postgres';
-import Redis from './common/config/cache/redis';
+import PostgreSQLDatabase from './common/config/postgres';
+import Redis from './common/config/redis';
 import log from './common/logger/logger';
 import errorMiddleware from './common/middleware/error.middleware';
 

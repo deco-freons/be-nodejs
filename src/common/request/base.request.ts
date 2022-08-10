@@ -5,12 +5,14 @@ import { BaseResponseBody, BaseLocals } from '../response/base.response';
 
 interface BaseRequestBody {}
 
+interface BaseRequestQuery extends Query {}
+
 interface BaseRequest<
     P = ParamsDictionary,
     ResBody = BaseResponseBody,
     ReqBody = BaseRequestBody,
-    ReqQuery = Query,
+    ReqQuery = BaseRequestQuery,
     Locals = BaseLocals,
 > extends Request<P, ResBody, ReqBody, ReqQuery, Locals> {}
 
-export default BaseRequest;
+export { BaseRequest, BaseRequestQuery };
