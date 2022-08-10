@@ -10,4 +10,4 @@ interface RefreshTokenResponseLocals extends BaseLocals {}
 interface RefreshTokenResponse<ResBody = RefreshTokenResponseBody, Locals = RefreshTokenResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
-export { RefreshTokenResponse, RefreshTokenResponseBody, RefreshTokenResponseLocals };
+export default RefreshTokenResponse;

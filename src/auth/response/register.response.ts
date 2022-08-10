@@ -7,4 +7,4 @@ interface RegisterResponseLocals extends BaseLocals {}
 interface RegisterResponse<ResBody = RegisterResponseBody, Locals = RegisterResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
-export { RegisterResponse, RegisterResponseBody, RegisterResponseLocals };
+export default RegisterResponse;

@@ -1,14 +1,14 @@
 import jwt from 'jsonwebtoken';
 
 import Crypt from './crypt';
-import LoginPayload from '../../auth/payload/login.payload';
+import UserPayload from '../../auth/payload/login.payload';
 import TokenPayload from '../../auth/payload/token.payload';
 import ExpiredTokenException from '../exception/expiredToken.exception';
 import UnauthorizedException from '../exception/unauthorized.exception';
 import { TTL } from '../enum/token.enum';
 
 const JWT = {
-    signAccessToken: (payload: LoginPayload) => {
+    signAccessToken: (payload: UserPayload) => {
         const secret = process.env.SIGN_ACCESS_TOKEN_PRIVATE || '';
         const options: jwt.SignOptions = {
             expiresIn: TTL.ACCESS_TOKEN_TTL,
@@ -23,7 +23,7 @@ const JWT = {
         return jwt.verify(token, secret) as TokenPayload;
     },
 
-    signRefreshToken: (payload: LoginPayload) => {
+    signRefreshToken: (payload: UserPayload) => {
         const secret = process.env.SIGN_REFRESH_TOKEN_PRIVATE || '';
         const options: jwt.SignOptions = {
             expiresIn: TTL.REFRESH_TOKEN_TTL,
@@ -42,10 +42,10 @@ const JWT = {
         }
     },
 
-    signToken: async (payload: LoginPayload) => {
+    signToken: async (payload: UserPayload, endpoint: string) => {
         const secret = await Crypt.salt();
         const options: jwt.SignOptions = {
-            expiresIn: TTL.VERIFY_TTL,
+            expiresIn: endpoint == 'verify' ? TTL.VERIFY_TTL : TTL.FORGET_PASSWORD_TTL,
         };
         const token = jwt.sign(payload, secret, options);
         return { token, secret };
@@ -55,7 +55,7 @@ const JWT = {
         try {
             return jwt.verify(token, secret) as TokenPayload;
         } catch (error) {
-            throw new ExpiredTokenException('Please request new verification email.');
+            throw new ExpiredTokenException('Please request a new verification email.');
         }
     },
 };

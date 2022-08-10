@@ -1,6 +1,6 @@
-import LoginPayload from './login.payload';
+import UserPayload from './login.payload';
 
-interface TokenPayload extends LoginPayload {
+interface TokenPayload extends UserPayload {
     exp: number;
 }
 

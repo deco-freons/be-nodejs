@@ -7,4 +7,4 @@ interface VerifyResponseLocals extends BaseLocals {}
 interface VerifyResponse<ResBody = VerifyResponseBody, Locals = VerifyResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
-export { VerifyResponse, VerifyResponseBody, VerifyResponseLocals };
+export default VerifyResponse;

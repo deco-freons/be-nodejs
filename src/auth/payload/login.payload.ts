@@ -1,8 +1,8 @@
 import BasePayload from '../../common/payload/base.payload';
 
-interface LoginPayload extends BasePayload {
+interface UserPayload extends BasePayload {
     username: string;
     email: string;
 }
 
-export default LoginPayload;
+export default UserPayload;

@@ -12,4 +12,4 @@ interface LoginResponseLocals extends BaseLocals {}
 interface LoginResponse<ResBody = LoginResponseBody, Locals = LoginResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
-export { LoginResponse, LoginResponseBody, LoginResponseLocals };
+export default LoginResponse;

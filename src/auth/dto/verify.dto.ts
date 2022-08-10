@@ -1,7 +1,7 @@
-import { IsNumberString, IsString, MinLength } from 'class-validator';
+import { IsNumber, IsString, MinLength } from 'class-validator';
 
 class VerifyDTO {
-    @IsNumberString()
+    @IsNumber()
     userID: number;
 
     @IsString()
