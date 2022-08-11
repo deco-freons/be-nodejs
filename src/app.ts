@@ -1,10 +1,15 @@
+import cors from 'cors';
 import express from 'express';
+import helmet from 'helmet';
+import swaggerUI from 'swagger-ui-express';
 import { DataSource } from 'typeorm';
 
+import Log from './common/logger/logger';
 import PostgreSQLDatabase from './common/config/postgres';
 import Redis from './common/config/redis';
-import log from './common/logger/logger';
+import SwaggerJsDoc from './common/config/swagger';
 import errorMiddleware from './common/middleware/error.middleware';
+import pinoLogger from './common/logger/pino.logger';
 
 import AuthController from './auth/controller/auth.controller';
 
@@ -28,8 +33,12 @@ class App {
     }
 
     private initMiddleware() {
+        this.app.use(helmet());
+        // this.app.use(cors({ credentials: true}));
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
+        this.app.use(Log);
+        this.app.use('/docs', swaggerUI.serve, swaggerUI.setup(SwaggerJsDoc));
     }
 
     private initAddress() {
@@ -56,7 +65,7 @@ class App {
 
     listen() {
         this.app.listen(this.port, this.host, () => {
-            log.info(`Server listing at http://${this.host}:${this.port}`);
+            pinoLogger.info(`Server listing at http://${this.host}:${this.port}`);
         });
     }
 }

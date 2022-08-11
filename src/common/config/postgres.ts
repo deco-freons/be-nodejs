@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 import User from '../../auth/entity/user.entity';
-import log from '../logger/logger';
+import pinoLogger from '../logger/pino.logger';
 
 class PostgreSQLDatabase {
     private database: DataSource;
@@ -31,10 +31,10 @@ class PostgreSQLDatabase {
         this.database
             .initialize()
             .then(() => {
-                log.info('Database connected');
+                pinoLogger.info('Database connected');
             })
             .catch((error) => {
-                log.error(`Failed to connect to database ${error.errors}`);
+                pinoLogger.error(`Failed to connect to database ${error.errors}`);
                 process.exit(1);
             });
     }

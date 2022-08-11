@@ -9,7 +9,6 @@ const validationMiddleware = <T>(type: ClassConstructor<T>, property: RequestTyp
     return (request: Request, response: Response, next: NextFunction) => {
         validate(plainToInstance<T, RequestTypes>(type, request[property]), { skipMissingProperties }).then(
             (errors: ValidationError[]) => {
-
                 if (errors.length > 0) {
                     const message = errors
                         .map((error: ValidationError) => Object.values(error.constraints || ''))
@@ -23,4 +22,4 @@ const validationMiddleware = <T>(type: ClassConstructor<T>, property: RequestTyp
     };
 };
 
-export default validationMiddleware
+export default validationMiddleware;

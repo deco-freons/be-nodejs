@@ -82,9 +82,7 @@ class AuthService implements BaseService {
             }
 
             const matched = await Crypt.compare(body.password, user.password);
-            if (!matched) {
-                throw new BadRequestException('Username or password does not match.');
-            }
+            if (!matched) throw new BadRequestException('Username or password does not match.');
 
             const userData: Partial<User> = {
                 userID: user.userID,
@@ -120,9 +118,7 @@ class AuthService implements BaseService {
             if (secret) {
                 const tokenResponse = JWT.verifyToken(token, secret);
                 const tokenRedis = await Redis.get(token);
-                if (tokenRedis == token) {
-                    throw new ExpiredTokenException('Invalid Token. Please request a new verification link.');
-                }
+                if (tokenRedis == token) throw new ExpiredTokenException('Invalid Token. Please request a new verification link.');
 
                 await this.verifyUser(user.userID, tokenResponse.username, tokenResponse.email);
                 Redis.set(token, token);

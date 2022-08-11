@@ -1,14 +1,24 @@
-import logger from 'pino';
-import pretty from 'pino-pretty';
-import dayjs from 'dayjs';
+import pinoHttp from 'pino-http';
+import pinoLogger from './pino.logger';
 
-const stream = pretty({
-    colorize: true,
-    customPrettifiers: {
-        time: () => `[${dayjs().format('DD-MMMM-YYYY HH:mm:ss Z')}]`,
+const Log = pinoHttp({
+    logger: pinoLogger,
+    autoLogging: true,
+
+    wrapSerializers: false,
+    serializers: {},
+
+    customReceivedMessage(req, _) {
+        return `REQUEST: ${req.method} ${req.url}`;
+    },
+
+    customSuccessMessage(req, res) {
+        return `RESPONSE: ${req.method} ${req.url} -> ${res.statusCode} ${res.statusMessage}`;
+    },
+
+    customErrorMessage(req, res, error) {
+        return `ERROR: ${req.method} ${req.url} -> ${res.statusCode} ${res.statusMessage} ${error.message}`;
     },
 });
 
-const log = logger(stream);
-
-export default log;
+export default Log;
