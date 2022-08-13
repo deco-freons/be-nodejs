@@ -1,14 +1,5 @@
 version: '3'
 services:
-    db:
-        container_name: postgres-db
-        image: postgres:14.2-alpine
-        restart: always
-        environment:
-            - POSTGRES_USER=${DB_USERNAME}
-            - POSTGRES_PASSWORD=${DB_PASSWORD}
-        healthcheck:
-            test: pg_isready -U postgres
     redis:
         container_name: redis
         image: redis:7.0.4-alpine
@@ -16,10 +7,7 @@ services:
     be:
         container_name: backend
         depends_on:
-            db:
-                condition: service_healthy
-            redis:
-                condition: service_started
+            - redis
         build:
             dockerfile: Dockerfile
         ports:

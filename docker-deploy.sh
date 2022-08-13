@@ -25,7 +25,6 @@ UPSTREAMHASH=$(git rev-parse ${TARGET}@{upstream})
 if [ "$HEADHASH" == "$UPSTREAMHASH" ]
 then
   echo -e "${FINISHED}"Current branch is up to date with origin/${TARGET}."${NOCOLOR}"
-  exit 0
 fi
 
 # If that's not the case, we pull the latest changes and we build a new image
