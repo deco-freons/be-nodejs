@@ -15,7 +15,6 @@ jobs:
                   host: ${{ secrets.SSH_AWS_SERVER_IP }}
                   username: ${{ secret.SSH_SERVER_USER }}
                   key: ${{ secret.SSH_PRIVATE_KEY }}
-                  passphrase: ${{ secret.SSH_PASSPHRASE }}
                   script: |
                       cd ~/.scripts
                       ./docker-deploy.sh
