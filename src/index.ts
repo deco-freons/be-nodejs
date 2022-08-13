@@ -3,5 +3,5 @@ import App from './app';
 
 dotenv.config();
 
-const app = new App('DEV');
+const app = new App(process.env.ENV ?? 'ENV');
 app.listen();

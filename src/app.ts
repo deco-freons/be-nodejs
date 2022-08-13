@@ -42,8 +42,8 @@ class App {
     }
 
     private initAddress() {
-        this.host = this.env == 'DEV' ? 'localhost' : '';
-        this.port = this.env == 'DEV' ? 8000 : 8080;
+        this.host = process.env.HOST;
+        this.port = Number(process.env.PORT);
     }
 
     private initDatabase() {
@@ -51,7 +51,7 @@ class App {
     }
 
     private async initRedis() {
-        Redis.connect();
+        await Redis.connect();
     }
 
     private initControllers() {

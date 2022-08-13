@@ -1,6 +1,6 @@
 import { NextFunction } from 'express';
 
-import BaseRequest from '../request/base.request';
+import { BaseRequest } from '../request/base.request';
 import { NotFoundResponse } from '../response/notFound.response';
 
 async function notFoundMiddleware(request: BaseRequest, response: NotFoundResponse, _next: NextFunction) {

@@ -14,7 +14,7 @@ export const swaggerOptions = {
         },
         servers: [
             {
-                url: 'http://localhost:3000/auth',
+                url: `http://${process.env.HOST}:${process.env.PORT}/auth`,
             },
         ],
     },
@@ -24,6 +24,12 @@ export const swaggerOptions = {
         './src/*/entity/*.ts',
         './src/*/request/*.ts',
         './src/*/response/*.ts',
+
+        './build/*/exception/*.js',
+        './build/*/controller/*.js',
+        './build/*/entity/*.js',
+        './build/*/request/*.js',
+        './build/*/response/*.js',
     ],
 };
 
