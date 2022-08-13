@@ -1,6 +1,6 @@
 FROM node:16.16.0-alpine as builder
 WORKDIR /app
-COPY package*.json .
+COPY package.json .
 RUN npm install bcrypt@5.0.0
 RUN npm install
 COPY . .
@@ -10,7 +10,7 @@ FROM node:16.16.0-alpine
 WORKDIR /app
 ENV NODE_ENV=PROD
 
-COPY package*.json ./
+COPY package.json ./
 RUN npm install bcrypt@5.0.0
 RUN npm install --omit=dev
 
