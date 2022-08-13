@@ -1,0 +1,42 @@
+version: '3'
+services:
+    db:
+        container_name: postgres-db
+        image: postgres:14.2-alpine
+        restart: always
+        environment:
+            - POSTGRES_USER=${DB_USERNAME}
+            - POSTGRES_PASSWORD=${DB_PASSWORD}
+        healthcheck:
+            test: pg_isready -U postgres
+    redis:
+        container_name: redis
+        image: redis:7.0.4-alpine
+        restart: always
+    be:
+        container_name: backend
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_started
+        build:
+            dockerfile: Dockerfile
+        ports:
+            - "5001:${PORT}"
+        environment:
+            - ORIGIN=${ORIGIN}
+            - HOST=${HOST}
+            - PORT=${PORT}
+            - DB_HOST=${DB_HOST}
+            - DB_PORT=${DB_PORT}
+            - DB_NAME=${DB_NAME}
+            - DB_USERNAME=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD}
+            - REDIS_HOST=${REDIS_HOST}
+            - REDIS_PORT=${REDIS_PORT}
+            - ENV=PROD
+            - SIGN_ACCESS_TOKEN_PRIVATE=${SIGN_ACCESS_TOKEN_PRIVATE}
+            - SIGN_ACCESS_TOKEN_PUBLIC=${SIGN_ACCESS_TOKEN_PUBLIC}
+            - SIGN_REFRESH_TOKEN_PRIVATE=${SIGN_REFRESH_TOKEN_PRIVATE}
+            - SIGN_REFRESH_TOKEN_PUBLIC=${SIGN_REFRESH_TOKEN_PUBLIC}
