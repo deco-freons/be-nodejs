@@ -383,7 +383,7 @@ class AuthService implements BaseService {
             Redis.expire(userID, TTL.FORGET_PASSWORD_TTL);
         }
 
-        return `${process.env.ORIGIN}${endpoint}?token=${token.token}&userID=${userID}`;
+        return `${process.env.ORIGIN}/${endpoint}?token=${token.token}&userID=${userID}`;
     };
 
     private sendEmail = async (url: string, path: string, email: string, subject: string) => {

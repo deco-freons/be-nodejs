@@ -14,6 +14,8 @@
     "experimentalDecorators": true,
     "strictPropertyInitialization": false,
     "downlevelIteration": true,
-    "sourceMap": true                      
- }
+    "sourceMap": true
+   },
+   "exclude": ["node_modules"],
+   "include": ["./src/**/mail/*.html", "./src/**/*.ts"]
 }

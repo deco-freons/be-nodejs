@@ -38,7 +38,7 @@ class App {
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(Log);
-        this.app.use('/', swaggerUI.serve, swaggerUI.setup(SwaggerJsDoc));
+        this.app.use('/docs', swaggerUI.serve, swaggerUI.setup(SwaggerJsDoc));
     }
 
     private initAddress() {
