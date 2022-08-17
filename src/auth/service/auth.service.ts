@@ -1,21 +1,26 @@
+import handlerbars from 'handlebars';
 import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 
-import BaseService from '../../common/service/base.service';
-import JWT from '../../common/utils/jwt';
+import Mailer from '../../common/config/mailer';
 import Redis from '../../common/config/redis';
 import BadRequestException from '../../common/exception/badRequest.exception';
 import UnauthorizedException from '../../common/exception/unauthorized.exception';
 import ExpiredTokenException from '../../common/exception/expiredToken.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
-
+import InternalServerErrorException from '../../common/exception/internalError.exception';
+import BaseService from '../../common/service/base.service';
 import Crypt from '../../common/utils/crypt';
+import FileSystem from '../../common/utils/fs';
+import JWT from '../../common/utils/jwt';
+import { EMAIL } from '../../common/enum/email.enum';
+import { TTL } from '../../common/enum/token.enum';
+
 import User from '../entity/user.entity';
 import RegisterDTO from '../dto/register.dto';
 import LoginDTO from '../dto/login.dto';
 import RefreshTokenDTO from '../dto/refreshToken.dto';
 import VerifyDTO from '../dto/verify.dto';
 import UserPayload from '../payload/login.payload';
-import { TTL } from '../../common/enum/token.enum';
 import { ForgetPasswordDTO, ForgetPasswordCompleteDTO } from '../dto/forgetPassword.dto';
 
 class AuthService implements BaseService {
@@ -40,7 +45,7 @@ class AuthService implements BaseService {
                 email: newUser.email,
             };
             const url = await this.generateUrl(userPayload, userID, 'verify');
-            console.log(url);
+            this.sendEmail(url, __dirname + EMAIL.VERIFY, newUser.email, EMAIL.VERIFY_SUBJECT);
 
             return { message: 'User has been created. We have send you a verification link at your email address.' };
         } catch (error) {
@@ -75,7 +80,7 @@ class AuthService implements BaseService {
                     email: user.email,
                 };
                 const url = await this.generateUrl(userPayload, userID, 'verify');
-                console.log(url);
+                this.sendEmail(url, __dirname + EMAIL.VERIFY, user.email, EMAIL.VERIFY_SUBJECT);
                 throw new UnauthorizedException(
                     'Account is not verified. We have send you a verification link at your email address.',
                 );
@@ -118,7 +123,8 @@ class AuthService implements BaseService {
             if (secret) {
                 const tokenResponse = JWT.verifyToken(token, secret);
                 const tokenRedis = await Redis.get(token);
-                if (tokenRedis == token) throw new ExpiredTokenException('Invalid Token. Please request a new verification link.');
+                if (tokenRedis == token)
+                    throw new ExpiredTokenException('Invalid Token. Please request a new verification link.');
 
                 await this.verifyUser(user.userID, tokenResponse.username, tokenResponse.email);
                 Redis.set(token, token);
@@ -177,7 +183,7 @@ class AuthService implements BaseService {
         }
 
         const url = await this.generateUrl(userPayload, userID, 'verify');
-        console.log(url);
+        this.sendEmail(url, __dirname + EMAIL.VERIFY, user.email, EMAIL.VERIFY_SUBJECT);
 
         return { message };
     };
@@ -243,7 +249,7 @@ class AuthService implements BaseService {
         }
 
         const url = await this.generateUrl(userPayload, String(user.userID), 'forget-password');
-        console.log(url);
+        this.sendEmail(url, __dirname + EMAIL.FORGET_PASSWORD, user.email, EMAIL.FORGET_PASSWORD_SUBJECT);
         return { message: message };
     };
 
@@ -306,7 +312,7 @@ class AuthService implements BaseService {
             .select(['user.userID', 'user.username', 'user.email'])
             .from(User, 'user')
             .where('user.username = :username', { username: username })
-            .andWhere('user.email = :email', { email: email })
+            .orWhere('user.email = :email', { email: email })
             .getOne();
         return user;
     };
@@ -377,7 +383,28 @@ class AuthService implements BaseService {
             Redis.expire(userID, TTL.FORGET_PASSWORD_TTL);
         }
 
-        return `http://localhost:8000/auth/${endpoint}?token=${token.token}&userID=${userID}`;
+        return `${process.env.ORIGIN}${endpoint}?token=${token.token}&userID=${userID}`;
+    };
+
+    private sendEmail = async (url: string, path: string, email: string, subject: string) => {
+        const file = await FileSystem.ReadFile(path);
+        const template = handlerbars.compile(file);
+        const replacements = {
+            url: url,
+        };
+        const html = template(replacements);
+        const mailOptions = {
+            from: process.env.MAILER_USER,
+            to: email,
+            subject: subject,
+            html: html,
+        };
+        Mailer.sendMail(mailOptions, function (error) {
+            if (error) {
+                throw new InternalServerErrorException('Mail Error.');
+            }
+        });
+        return;
     };
 }
 

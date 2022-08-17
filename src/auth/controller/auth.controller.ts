@@ -43,7 +43,7 @@ class AuthController implements BaseController {
             validationMiddleware(VerifyDTO, RequestTypes.BODY),
             this.requestVerifyHandler,
         );
-        this.router.post(
+        this.router.patch(
             '/forget-password',
             validationMiddleware(ForgetPasswordCompleteDTO, RequestTypes.BODY),
             this.forgetPassword,
@@ -260,7 +260,7 @@ class AuthController implements BaseController {
     /**
      * @openapi
      * '/forget-password':
-     *  post:
+     *  patch:
      *     tags:
      *     - /auth
      *     summary: Forget Password
@@ -430,7 +430,7 @@ class AuthController implements BaseController {
     /**
      * @openapi
      * '/logout':
-     *  post:
+     *  delete:
      *     tags:
      *     - /auth
      *     summary: Logout User
@@ -441,30 +441,8 @@ class AuthController implements BaseController {
      *           schema:
      *              $ref: '#/components/schemas/RefreshTokenRequest'
      *     responses:
-     *      200:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/RefreshTokenResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      401:
-     *        description: Unauthorized
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/UnauthorizedResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
+     *      204:
+     *        description: No Content
      */
     private logoutHandler = async (
         request: RefreshTokenRequest,

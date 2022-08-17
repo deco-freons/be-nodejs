@@ -3,8 +3,8 @@ import nodemailer from 'nodemailer';
 const Mailer = nodemailer.createTransport({
     service: 'outlook',
     auth: {
-        user: 'deco-freons@outlook.com',
-        pass: 'naTrah-bopqeb-9bijxo',
+        user: process.env.MAILER_USER,
+        pass: process.env.MAILER_PASSWORD,
     },
 });
 
