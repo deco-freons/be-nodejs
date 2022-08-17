@@ -34,11 +34,11 @@ class App {
 
     private initMiddleware() {
         this.app.use(helmet());
-        // this.app.use(cors({ credentials: true}));
+        this.app.use(cors({ origin: process.env.ORIGIN, credentials: true }));
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(Log);
-        this.app.use('/docs', swaggerUI.serve, swaggerUI.setup(SwaggerJsDoc));
+        this.app.use('/', swaggerUI.serve, swaggerUI.setup(SwaggerJsDoc));
     }
 
     private initAddress() {
