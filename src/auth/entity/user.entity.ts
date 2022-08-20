@@ -1,4 +1,13 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    JoinTable,
+    ManyToMany,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
+} from 'typeorm';
+import Preference from '../../user/entity/preference.entity';
 
 /**
  * @openapi
@@ -57,6 +66,23 @@ class User {
 
     @Column({ name: 'is_verified', default: false })
     isVerified: boolean;
+
+    @Column({ name: 'is_first_login', default: true })
+    isFirstLogin: boolean;
+
+    @ManyToMany(() => Preference)
+    @JoinTable({
+        name: 'user_preferences',
+        joinColumn: {
+            name: 'user_id',
+            referencedColumnName: 'userID',
+        },
+        inverseJoinColumn: {
+            name: 'preference_id',
+            referencedColumnName: 'preferenceID',
+        },
+    })
+    preferences: Preference[];
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
