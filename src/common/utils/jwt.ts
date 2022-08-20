@@ -19,8 +19,12 @@ const JWT = {
     },
 
     verifyAccessToken: (token: string): TokenPayload => {
-        const secret = process.env.SIGN_ACCESS_TOKEN_PUBLIC || '';
-        return jwt.verify(token, secret) as TokenPayload;
+        try {
+            const secret = process.env.SIGN_ACCESS_TOKEN_PUBLIC || '';
+            return jwt.verify(token, secret) as TokenPayload;
+        } catch (error) {
+            throw new UnauthorizedException('Invalid Token.');
+        }
     },
 
     signRefreshToken: (payload: UserPayload) => {

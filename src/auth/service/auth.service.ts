@@ -24,21 +24,21 @@ import UserPayload from '../payload/login.payload';
 import { ForgetPasswordDTO, ForgetPasswordCompleteDTO } from '../dto/forgetPassword.dto';
 
 class AuthService implements BaseService {
-    repository: Repository<ObjectLiteral>;
+    userRepository: Repository<ObjectLiteral>;
 
     constructor(database: DataSource) {
-        this.repository = database.getRepository(User);
+        this.userRepository = database.getRepository(User);
     }
 
     public register = async (body: RegisterDTO) => {
         try {
-            const user = await this.getUserByEmailAndUsername(body.username, body.email);
+            const user = await this.getUserByEmailAndUsername(body.email, body.username);
             if (user) throw new BadRequestException('User already exist.');
 
             const hashedPassword = await Crypt.hash(body.password);
             await this.createUser(body, hashedPassword);
 
-            const newUser = await this.getUserByEmailAndUsername(body.username, body.email);
+            const newUser = await this.getUserByEmailAndUsername(body.email, body.username);
             const userID = String(newUser.userID);
             const userPayload = {
                 username: newUser.username,
@@ -55,21 +55,7 @@ class AuthService implements BaseService {
 
     public login = async (body: LoginDTO) => {
         try {
-            const user = await this.repository
-                .createQueryBuilder()
-                .select([
-                    'user.userID',
-                    'user.username',
-                    'user.firstName',
-                    'user.lastName',
-                    'user.email',
-                    'user.password',
-                    'user.birthDate',
-                    'user.isVerified',
-                ])
-                .from(User, 'user')
-                .where('user.username = :username', { username: body.username })
-                .getOne();
+            const user = await this.getUserByUsername(body.username);
 
             if (!user) throw new BadRequestException('Username or password does not match.');
 
@@ -96,6 +82,7 @@ class AuthService implements BaseService {
                 lastName: user.lastName,
                 email: user.email,
                 birthDate: user.birthDate,
+                isFirstLogin: user.isFirstLogin,
             };
 
             const userPayload = {
@@ -104,6 +91,8 @@ class AuthService implements BaseService {
             };
             const accessToken = JWT.signAccessToken(userPayload);
             const refreshToken = JWT.signRefreshToken(userPayload);
+
+            if (user.isFirstLogin) await this.updateUserIsFirstLogin(user.userID);
 
             return { message: 'Login Successful.', userData, accessToken, refreshToken };
         } catch (error) {
@@ -260,8 +249,8 @@ class AuthService implements BaseService {
             const refreshTokenResponse = JWT.verifyRefreshToken(refreshToken);
 
             const user = await this.getUserByEmailAndUsername(
-                refreshTokenResponse.username,
                 refreshTokenResponse.email,
+                refreshTokenResponse.username,
             );
             if (!user) throw new UnauthorizedException('Invalid Token');
 
@@ -290,8 +279,8 @@ class AuthService implements BaseService {
             const refreshTokenResponse = JWT.verifyRefreshToken(refreshToken);
 
             const user = await this.getUserByEmailAndUsername(
-                refreshTokenResponse.username,
                 refreshTokenResponse.email,
+                refreshTokenResponse.username,
             );
             if (!user) throw new UnauthorizedException('Invalid Token.');
 
@@ -306,19 +295,19 @@ class AuthService implements BaseService {
         }
     };
 
-    private getUserByEmailAndUsername = async (username: string, email: string) => {
-        const queryBuilder = this.repository.createQueryBuilder();
+    private getUserByEmailAndUsername = async (email: string, username: string) => {
+        const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
             .select(['user.userID', 'user.username', 'user.email'])
             .from(User, 'user')
-            .where('user.username = :username', { username: username })
-            .orWhere('user.email = :email', { email: email })
+            .where('user.email = :email', { email: email })
+            .orWhere('user.username = :username', { username: username })
             .getOne();
         return user;
     };
 
     private getUserByID = async (userID: number) => {
-        const queryBuilder = this.repository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
             .select(['user.userID', 'user.username', 'user.email', 'user.isVerified'])
             .from(User, 'user')
@@ -328,7 +317,7 @@ class AuthService implements BaseService {
     };
 
     private getUserByEmail = async (email: string) => {
-        const queryBuilder = this.repository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
             .select(['user.userID', 'user.username', 'user.email', 'user.isVerified'])
             .from(User, 'user')
@@ -337,8 +326,28 @@ class AuthService implements BaseService {
         return user;
     };
 
+    private getUserByUsername = async (username: string) => {
+        const queryBuilder = this.userRepository.createQueryBuilder();
+        const user = await queryBuilder
+            .select([
+                'user.userID',
+                'user.username',
+                'user.firstName',
+                'user.lastName',
+                'user.email',
+                'user.password',
+                'user.birthDate',
+                'user.isVerified',
+                'user.isFirstLogin',
+            ])
+            .from(User, 'user')
+            .where('user.username = :username', { username: username })
+            .getOne();
+        return user;
+    };
+
     private createUser = async (body: RegisterDTO, hashedPassword: string) => {
-        const queryBuilder = this.repository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder();
         await queryBuilder
             .insert()
             .into(User)
@@ -350,7 +359,7 @@ class AuthService implements BaseService {
     };
 
     private updateUserPassword = async (userID: number, hashedPassword: string) => {
-        const queryBuilder = this.repository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder();
         await queryBuilder
             .update(User)
             .set({ password: hashedPassword })
@@ -358,8 +367,17 @@ class AuthService implements BaseService {
             .execute();
     };
 
+    private updateUserIsFirstLogin = async (userID: number) => {
+        const queryBuilder = this.userRepository.createQueryBuilder();
+        await queryBuilder
+            .update(User)
+            .set({ isFirstLogin: false })
+            .where('userID = :userID', { userID: userID })
+            .execute();
+    };
+
     private verifyUser = async (userID: number, username: string, email: string) => {
-        const queryBuilder = this.repository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder();
         await queryBuilder
             .update(User)
             .set({ isVerified: true })

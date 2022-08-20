@@ -12,6 +12,7 @@ import errorMiddleware from './common/middleware/error.middleware';
 import pinoLogger from './common/logger/pino.logger';
 
 import AuthController from './auth/controller/auth.controller';
+import UserController from './user/controller/user.controller';
 
 class App {
     public app: express.Application;
@@ -56,7 +57,9 @@ class App {
 
     private initControllers() {
         const AuthC = new AuthController(this.database);
+        const UserC = new UserController(this.database);
         this.app.use(`${AuthC.path}`, AuthC.router);
+        this.app.use(`${UserC.path}`, UserC.router);
     }
 
     private initErrorHandler() {

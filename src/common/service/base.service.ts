@@ -1,7 +1,3 @@
-import { Repository, ObjectLiteral } from 'typeorm';
-
-interface BaseService {
-    repository: Repository<ObjectLiteral>;
-}
+interface BaseService {}
 
 export default BaseService;
