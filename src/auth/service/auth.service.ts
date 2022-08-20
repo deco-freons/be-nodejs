@@ -66,6 +66,8 @@ class AuthService implements BaseService {
             const matched = await Crypt.compare(body.password, user.password);
             if (!matched) throw new BadRequestException('Username or password does not match.');
 
+            const preferences = await this.getUserPreferences(user);
+
             const userData: Partial<User> = {
                 userID: user.userID,
                 username: user.username,
@@ -73,6 +75,7 @@ class AuthService implements BaseService {
                 lastName: user.lastName,
                 email: user.email,
                 birthDate: user.birthDate,
+                preferences: preferences,
                 isVerified: user.isVerified,
                 isFirstLogin: user.isFirstLogin,
             };
@@ -341,6 +344,12 @@ class AuthService implements BaseService {
             .where('user.username = :username', { username: username })
             .getOne();
         return user;
+    };
+
+    private getUserPreferences = async (user: User) => {
+        const queryBuilder = this.userRepository.createQueryBuilder();
+        const preferences = await queryBuilder.relation(User, 'preferences').of(user).loadMany();
+        return preferences;
     };
 
     private createUser = async (body: RegisterDTO, hashedPassword: string) => {

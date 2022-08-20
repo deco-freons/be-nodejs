@@ -8,10 +8,10 @@ class Preference {
     @Column({ name: 'preference_name', unique: true })
     preferenceName: string;
 
-    @CreateDateColumn({ name: 'created_at' })
+    @CreateDateColumn({ name: 'created_at', select: false })
     createdAt: Date;
 
-    @UpdateDateColumn({ name: 'updated_at' })
+    @UpdateDateColumn({ name: 'updated_at', select: false })
     updatedAt: Date;
 }
 
