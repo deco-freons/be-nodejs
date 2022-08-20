@@ -5,7 +5,7 @@ class Preference {
     @PrimaryColumn({ name: 'preference_id' })
     preferenceID: string;
 
-    @Column({ name: 'preference_name' })
+    @Column({ name: 'preference_name', unique: true })
     preferenceName: string;
 
     @CreateDateColumn({ name: 'created_at' })

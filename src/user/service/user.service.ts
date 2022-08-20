@@ -3,7 +3,6 @@ import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 import BaseService from '../../common/service/base.service';
 import BadRequestException from '../../common/exception/badRequest.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
-import UnauthorizedException from '../../common/exception/unauthorized.exception';
 
 import User from '../../auth/entity/user.entity';
 
@@ -22,16 +21,14 @@ class UserService implements BaseService {
 
     public upsertUserPreference = async (body: UserPreferenceDTO, locals: UpsertUserPreferenceResponseLocals) => {
         try {
-            const preferenceID = body.preferenceID;
-            const preferences = await this.getPreferences(preferenceID);
-            if (!preferences) throw new BadRequestException('Preferences Invalid');
-
             const email = locals.email;
             const username = locals.username;
             const user = await this.getUserByEmailAndUsername(email, username);
             if (!user) throw new NotFoundException('User does not exist.');
-            if (!user.isVerified)
-                throw new UnauthorizedException('Your account has not been verified yet, please verify first.');
+
+            const preferenceID = body.preferenceID;
+            const preferences = await this.getPreferences(preferenceID);
+            if (!preferences) throw new BadRequestException('Preferences Invalid');
 
             await this.updateUserPreferences(user, preferences);
 

@@ -13,8 +13,12 @@ const authorizationMiddleware = async (request: BaseRequest, response: BaseRespo
 
         const tokenResponse = JWT.verifyAccessToken(token);
         if (tokenResponse === null) throw new ExpiredTokenException();
+        if (!tokenResponse.isVerified)
+            throw new UnauthorizedException('Your account has not been verified yet, please verify first.');
+
         response.locals.username = tokenResponse.username;
         response.locals.email = tokenResponse.email;
+        response.locals.isVerified = tokenResponse.isVerified;
 
         next();
     } catch (error) {

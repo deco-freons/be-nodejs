@@ -43,6 +43,7 @@ class AuthService implements BaseService {
             const userPayload = {
                 username: newUser.username,
                 email: newUser.email,
+                isVerified: newUser.isVerified,
             };
             const url = await this.generateUrl(userPayload, userID, 'verify');
             this.sendEmail(url, __dirname + EMAIL.VERIFY, newUser.email, EMAIL.VERIFY_SUBJECT);
@@ -59,18 +60,8 @@ class AuthService implements BaseService {
 
             if (!user) throw new BadRequestException('Username or password does not match.');
 
-            if (!user.isVerified) {
-                const userID = String(user.userID);
-                const userPayload = {
-                    username: user.username,
-                    email: user.email,
-                };
-                const url = await this.generateUrl(userPayload, userID, 'verify');
-                this.sendEmail(url, __dirname + EMAIL.VERIFY, user.email, EMAIL.VERIFY_SUBJECT);
-                throw new UnauthorizedException(
-                    'Account is not verified. We have send you a verification link at your email address.',
-                );
-            }
+            if (!user.isVerified)
+                throw new UnauthorizedException('Your account has not been verified yet, please verify first.');
 
             const matched = await Crypt.compare(body.password, user.password);
             if (!matched) throw new BadRequestException('Username or password does not match.');
@@ -82,12 +73,14 @@ class AuthService implements BaseService {
                 lastName: user.lastName,
                 email: user.email,
                 birthDate: user.birthDate,
+                isVerified: user.isVerified,
                 isFirstLogin: user.isFirstLogin,
             };
 
             const userPayload = {
                 username: user.username,
                 email: user.email,
+                isVerified: user.isVerified,
             };
             const accessToken = JWT.signAccessToken(userPayload);
             const refreshToken = JWT.signRefreshToken(userPayload);
@@ -143,6 +136,7 @@ class AuthService implements BaseService {
         let userPayload = {
             username: user.username,
             email: user.email,
+            isVerified: user.isVerified,
         };
 
         try {
@@ -165,6 +159,7 @@ class AuthService implements BaseService {
                 userPayload = {
                     username: tokenResponse.username,
                     email: tokenResponse.email,
+                    isVerified: tokenResponse.isVerified,
                 };
             }
         } catch (error) {
@@ -221,6 +216,7 @@ class AuthService implements BaseService {
         const userPayload = {
             username: user.username,
             email: user.email,
+            isVerified: user.isVerified,
         };
 
         try {
@@ -262,6 +258,7 @@ class AuthService implements BaseService {
             const userPayload = {
                 username: user.username,
                 email: user.email,
+                isVerified: user.isVerified,
             };
             const accessTokenNew = JWT.signAccessToken(userPayload);
             const refreshTokenNew = JWT.signRefreshToken(userPayload);
@@ -298,7 +295,7 @@ class AuthService implements BaseService {
     private getUserByEmailAndUsername = async (email: string, username: string) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
-            .select(['user.userID', 'user.username', 'user.email'])
+            .select(['user.userID', 'user.username', 'user.email', 'user.isVerified'])
             .from(User, 'user')
             .where('user.email = :email', { email: email })
             .orWhere('user.username = :username', { username: username })
