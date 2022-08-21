@@ -374,7 +374,7 @@ class AuthController implements BaseController {
             return response.send({
                 statusCode: 200,
                 message: serviceResponse.message,
-                isLogin: serviceResponse.isLogin,
+                isAuthenticated: serviceResponse.isLogin,
                 user: serviceResponse.userData,
             });
         } catch (error) {
@@ -428,8 +428,10 @@ class AuthController implements BaseController {
             return response.send({
                 statusCode: 200,
                 message: serviceResponse.message,
-                accessToken: serviceResponse.accessTokenNew,
-                refreshToken: serviceResponse.refreshTokenNew,
+                isAuthenticated: serviceResponse.isAuthenticated,
+                user: serviceResponse.userData,
+                accessToken: serviceResponse.accessToken,
+                refreshToken: serviceResponse.refreshToken,
             });
         } catch (error) {
             next(error);

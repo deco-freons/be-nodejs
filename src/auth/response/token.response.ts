@@ -30,7 +30,7 @@ interface TokenResponse<ResBody = TokenResponseBody, Locals = TokenResponseLocal
 interface TokenResponseBody extends BaseResponseBody {
     accessToken?: string;
     refreshToken?: string;
-    isLogin?: boolean;
+    isAuthenticated?: boolean;
     user?: Partial<User>;
 }
 

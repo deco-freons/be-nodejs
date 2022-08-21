@@ -70,7 +70,7 @@ class AuthService implements BaseService {
             if (!matched) throw new BadRequestException('Username or password does not match.');
 
             const preferences = await this.getUserPreferences(user);
-            const userData = this.constructUserData(user, preferences)
+            const userData = this.constructUserData(user, preferences);
 
             const userPayload = {
                 username: user.username,
@@ -276,7 +276,16 @@ class AuthService implements BaseService {
             const accessTokenNew = JWT.signAccessToken(userPayload);
             const refreshTokenNew = JWT.signRefreshToken(userPayload);
 
-            return { message: 'Success.', accessTokenNew, refreshTokenNew };
+            const preferences = await this.getUserPreferences(user);
+            const userData = this.constructUserData(user, preferences);
+
+            return {
+                message: 'Success.',
+                isAuthenticated: true,
+                userData: userData,
+                accessToken: accessTokenNew,
+                refreshToken: refreshTokenNew,
+            };
         } catch (error) {
             throw error;
         }
