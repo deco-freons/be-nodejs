@@ -248,7 +248,9 @@ class AuthService implements BaseService {
                 isLogin: true,
                 userData: userData,
             };
-        } catch (error) {}
+        } catch (error) {
+            throw error;
+        }
     };
 
     public refreshToken = async (body: TokenDTO) => {
