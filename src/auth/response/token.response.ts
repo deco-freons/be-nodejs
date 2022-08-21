@@ -1,10 +1,11 @@
 import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/response/base.response';
+import User from '../entity/user.entity';
 
 /**
  * @openapi
  * components:
  *  schemas:
- *    RefreshTokenResponse:
+ *    TokenResponse:
  *      type: object
  *      required:
  *        - statusCode
@@ -23,14 +24,20 @@ import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/respons
  *        refreshToken:
  *          type: string
  */
-interface RefreshTokenResponse<ResBody = RefreshTokenResponseBody, Locals = RefreshTokenResponseLocals>
+interface TokenResponse<ResBody = TokenResponseBody, Locals = TokenResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
-interface RefreshTokenResponseBody extends BaseResponseBody {
-    accessToken: string;
-    refreshToken: string;
+interface TokenResponseBody extends BaseResponseBody {
+    accessToken?: string;
+    refreshToken?: string;
+    isAuthenticated?: boolean;
+    user?: Partial<User>;
 }
 
-interface RefreshTokenResponseLocals extends BaseLocals {}
+interface TokenResponseLocals extends BaseLocals {
+    email: string;
+    username: string;
+    isVerified: boolean;
+}
 
-export default RefreshTokenResponse;
+export { TokenResponse, TokenResponseLocals };

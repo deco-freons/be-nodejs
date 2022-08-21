@@ -18,10 +18,13 @@ import { TTL } from '../../common/enum/token.enum';
 import User from '../entity/user.entity';
 import RegisterDTO from '../dto/register.dto';
 import LoginDTO from '../dto/login.dto';
-import RefreshTokenDTO from '../dto/refreshToken.dto';
+import TokenDTO from '../dto/token.dto';
 import VerifyDTO from '../dto/verify.dto';
 import UserPayload from '../payload/login.payload';
+import { TokenResponseLocals } from '../response/token.response';
 import { ForgetPasswordDTO, ForgetPasswordCompleteDTO } from '../dto/forgetPassword.dto';
+
+import Preference from '../../user/entity/preference.entity';
 
 class AuthService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
@@ -67,18 +70,7 @@ class AuthService implements BaseService {
             if (!matched) throw new BadRequestException('Username or password does not match.');
 
             const preferences = await this.getUserPreferences(user);
-
-            const userData: Partial<User> = {
-                userID: user.userID,
-                username: user.username,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                birthDate: user.birthDate,
-                preferences: preferences,
-                isVerified: user.isVerified,
-                isFirstLogin: user.isFirstLogin,
-            };
+            const userData = this.constructUserData(user, preferences);
 
             const userPayload = {
                 username: user.username,
@@ -241,7 +233,27 @@ class AuthService implements BaseService {
         return { message: message };
     };
 
-    public refreshToken = async (body: RefreshTokenDTO) => {
+    public accessToken = async (locals: TokenResponseLocals) => {
+        try {
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const preferences = await this.getUserPreferences(user);
+            const userData = this.constructUserData(user, preferences);
+
+            return {
+                message: 'Success.',
+                isLogin: true,
+                userData: userData,
+            };
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    public refreshToken = async (body: TokenDTO) => {
         const refreshToken = body.refreshToken;
 
         try {
@@ -266,13 +278,22 @@ class AuthService implements BaseService {
             const accessTokenNew = JWT.signAccessToken(userPayload);
             const refreshTokenNew = JWT.signRefreshToken(userPayload);
 
-            return { message: 'Success.', accessTokenNew, refreshTokenNew };
+            const preferences = await this.getUserPreferences(user);
+            const userData = this.constructUserData(user, preferences);
+
+            return {
+                message: 'Success.',
+                isAuthenticated: true,
+                userData: userData,
+                accessToken: accessTokenNew,
+                refreshToken: refreshTokenNew,
+            };
         } catch (error) {
             throw error;
         }
     };
 
-    public logout = async (body: RefreshTokenDTO) => {
+    public logout = async (body: TokenDTO) => {
         const refreshToken = body.refreshToken;
 
         try {
@@ -295,10 +316,35 @@ class AuthService implements BaseService {
         }
     };
 
+    private constructUserData = (user: User, preferences: Preference[]) => {
+        const userData: Partial<User> = {
+            userID: user.userID,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            birthDate: user.birthDate,
+            preferences: preferences,
+            isVerified: user.isVerified,
+            isFirstLogin: user.isFirstLogin,
+        };
+        return userData;
+    };
+
     private getUserByEmailAndUsername = async (email: string, username: string) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
-            .select(['user.userID', 'user.username', 'user.email', 'user.isVerified'])
+            .select([
+                'user.userID',
+                'user.username',
+                'user.firstName',
+                'user.lastName',
+                'user.email',
+                'user.password',
+                'user.birthDate',
+                'user.isVerified',
+                'user.isFirstLogin',
+            ])
             .from(User, 'user')
             .where('user.email = :email', { email: email })
             .orWhere('user.username = :username', { username: username })
@@ -309,7 +355,17 @@ class AuthService implements BaseService {
     private getUserByID = async (userID: number) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
-            .select(['user.userID', 'user.username', 'user.email', 'user.isVerified'])
+            .select([
+                'user.userID',
+                'user.username',
+                'user.firstName',
+                'user.lastName',
+                'user.email',
+                'user.password',
+                'user.birthDate',
+                'user.isVerified',
+                'user.isFirstLogin',
+            ])
             .from(User, 'user')
             .where('user.userID = :userID', { userID: userID })
             .getOne();
@@ -319,7 +375,17 @@ class AuthService implements BaseService {
     private getUserByEmail = async (email: string) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
-            .select(['user.userID', 'user.username', 'user.email', 'user.isVerified'])
+            .select([
+                'user.userID',
+                'user.username',
+                'user.firstName',
+                'user.lastName',
+                'user.email',
+                'user.password',
+                'user.birthDate',
+                'user.isVerified',
+                'user.isFirstLogin',
+            ])
             .from(User, 'user')
             .where('user.email = :email', { email: email })
             .getOne();

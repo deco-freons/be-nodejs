@@ -1,5 +1,5 @@
 import { BaseRequest } from '../../common/request/base.request';
-import RefreshTokenDTO from '../dto/refreshToken.dto';
+import TokenDTO from '../dto/token.dto';
 
 /**
  * @openapi
@@ -13,6 +13,6 @@ import RefreshTokenDTO from '../dto/refreshToken.dto';
  *        refreshToken:
  *          type: string
  */
-interface RefreshTokenRequest extends BaseRequest<unknown, unknown, RefreshTokenDTO, unknown, unknown> {}
+interface TokenRequest extends BaseRequest<unknown, unknown, TokenDTO, unknown, unknown> {}
 
-export default RefreshTokenRequest;
+export default TokenRequest;
