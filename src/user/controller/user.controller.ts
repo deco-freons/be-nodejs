@@ -8,8 +8,13 @@ import { RequestTypes } from '../../common/enum/request.enum';
 
 import UserService from '../service/user.service';
 import UserPreferenceDTO from '../dto/user.preference.dto';
-import UpsertUserPreferenceRequest from '../request/upsertUserPreference.request';
-import { UpsertUserPreferenceResponse } from '../response/upsertUserPreference.response';
+import UpsertUserPreferenceRequest from '../request/userPreference.upsert.request';
+import ReadUserRequest from '../request/user.read.request';
+import UpdateUserDTO from '../dto/user.update.dto';
+import UpdateUserRequest from '../request/user.update.request';
+import { UpsertUserPreferenceResponse } from '../response/userPreference.upsert.response';
+import { ReadUserResponse } from '../response/user.read.response';
+import { UpdateUserResponse } from '../response/user.update.response';
 
 class UserController implements BaseController {
     path: string;
@@ -27,11 +32,17 @@ class UserController implements BaseController {
         this.router.post(
             '/preference/upsert',
             [authorizationMiddleware, validationMiddleware(UserPreferenceDTO, RequestTypes.BODY)],
-            this.upsertHandler,
+            this.upsertUserPreferenceHandler,
+        );
+        this.router.get('/read', authorizationMiddleware, this.readUserHandler);
+        this.router.post(
+            '/update',
+            [authorizationMiddleware, validationMiddleware(UpdateUserDTO, RequestTypes.BODY)],
+            this.updateUserHandler,
         );
     }
 
-    private upsertHandler = async (
+    private upsertUserPreferenceHandler = async (
         request: UpsertUserPreferenceRequest,
         response: UpsertUserPreferenceResponse,
         next: NextFunction,
@@ -41,6 +52,31 @@ class UserController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.upsertUserPreference(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readUserHandler = async (_request: ReadUserRequest, response: ReadUserResponse, next: NextFunction) => {
+        try {
+            const locals = response.locals;
+            const serviceResponse = await this.service.readUser(locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message, user: serviceResponse.userData });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private updateUserHandler = async (
+        request: UpdateUserRequest,
+        response: UpdateUserResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const locals = response.locals;
+            const serviceResponse = await this.service.updateUser(body, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message, user: serviceResponse.userData });
         } catch (error) {
             next(error);
         }
