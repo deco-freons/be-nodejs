@@ -1,9 +1,9 @@
 import { MinLength, IsString } from 'class-validator';
 
-class RefreshTokenDTO {
+class TokenDTO {
     @IsString()
     @MinLength(1)
     refreshToken: string;
 }
 
-export default RefreshTokenDTO;
+export default TokenDTO;

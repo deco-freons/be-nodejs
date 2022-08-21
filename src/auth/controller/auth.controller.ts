@@ -2,6 +2,7 @@ import { Router, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
 import BaseController from '../../common/controller/base.controller';
+import authorizationMiddleware from '../../common/middleware/authorization.middleware';
 import validationMiddleware from '../../common/middleware/validation.middleware';
 import { RequestTypes } from '../../common/enum/request.enum';
 
@@ -12,12 +13,12 @@ import RegisterResponse from '../response/register.response';
 import LoginDTO from '../dto/login.dto';
 import LoginRequest from '../request/login.request';
 import LoginResponse from '../response/login.response';
-import RefreshTokenDTO from '../dto/refreshToken.dto';
-import RefreshTokenRequest from '../request/refreshToken.request';
-import RefreshTokenResponse from '../response/refreshToken.response';
+import TokenDTO from '../dto/token.dto';
+import TokenRequest from '../request/token.request';
 import VerifyDTO from '../dto/verify.dto';
 import VerifyRequest from '../request/verify.request';
 import VerifyResponse from '../response/verify.response';
+import { TokenResponse } from '../response/token.response';
 import { ForgetPasswordCompleteDTO, ForgetPasswordDTO } from '../dto/forgetPassword.dto';
 import { ForgetPasswordRequestRequest, ForgetPasswordRequest } from '../request/forgetPassword.request';
 import { ForgetPasswordRequestResponse, ForgetPasswordResponse } from '../response/forgetPassword.response';
@@ -53,12 +54,9 @@ class AuthController implements BaseController {
             validationMiddleware(ForgetPasswordDTO, RequestTypes.BODY),
             this.requestForgetPassword,
         );
-        this.router.post(
-            '/refresh-token',
-            validationMiddleware(RefreshTokenDTO, RequestTypes.BODY),
-            this.refreshTokenHandler,
-        );
-        this.router.delete('/logout', validationMiddleware(RefreshTokenDTO, RequestTypes.BODY), this.logoutHandler);
+        this.router.post('/access-token', authorizationMiddleware, this.accessTokenHandler);
+        this.router.post('/refresh-token', validationMiddleware(TokenDTO, RequestTypes.BODY), this.refreshTokenHandler);
+        this.router.delete('/logout', validationMiddleware(TokenDTO, RequestTypes.BODY), this.logoutHandler);
     }
 
     /**
@@ -369,6 +367,21 @@ class AuthController implements BaseController {
         }
     };
 
+    private accessTokenHandler = async (_request: TokenRequest, response: TokenResponse, next: NextFunction) => {
+        try {
+            const locals = response.locals;
+            const serviceResponse = await this.service.accessToken(locals);
+            return response.send({
+                statusCode: 200,
+                message: serviceResponse.message,
+                isLogin: serviceResponse.isLogin,
+                user: serviceResponse.userData,
+            });
+        } catch (error) {
+            next(error);
+        }
+    };
+
     /**
      * @openapi
      * '/refresh-token':
@@ -408,11 +421,7 @@ class AuthController implements BaseController {
      *            schema:
      *              $ref: '#/components/schemas/InternalServerErrorResponse'
      */
-    private refreshTokenHandler = async (
-        request: RefreshTokenRequest,
-        response: RefreshTokenResponse,
-        next: NextFunction,
-    ) => {
+    private refreshTokenHandler = async (request: TokenRequest, response: TokenResponse, next: NextFunction) => {
         try {
             const body = request.body;
             const serviceResponse = await this.service.refreshToken(body);
@@ -444,11 +453,7 @@ class AuthController implements BaseController {
      *      204:
      *        description: No Content
      */
-    private logoutHandler = async (
-        request: RefreshTokenRequest,
-        response: RefreshTokenResponse,
-        next: NextFunction,
-    ) => {
+    private logoutHandler = async (request: TokenRequest, response: TokenResponse, next: NextFunction) => {
         try {
             const body = request.body;
             await this.service.logout(body);
