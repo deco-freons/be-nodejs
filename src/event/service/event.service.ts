@@ -1,17 +1,16 @@
 import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 
-// import for common
 import BaseService from '../../common/service/base.service';
 import NotFoundException from '../../common/exception/notFound.exception';
 import BadRequestException from '../../common/exception/badRequest.exception';
 
-// import for other service
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
 
-// import untuk event service
 import Event from '../entity/event.entity';
 import CreateEventDTO from '../dto/event.create.dto';
+import ReadEventDTO from '../dto/event.read.dto';
+import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 
 class EventService implements BaseService {
@@ -52,6 +51,30 @@ class EventService implements BaseService {
 
             return { message: `Successfully create ${event.eventName} event.` };
         } catch (error) {
+            throw error;
+        }
+    };
+
+    public readEvent = async (body: ReadEventDTO) => {
+        try {
+            let categories = body.categories;
+            if (!categories) categories = await this.getAllCategoriesID();
+            const events = await this.getEventsByCategories(categories);
+
+            return { message: 'Successfully retrieve events.', events: events };
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
+    };
+
+    public readEventDetails = async (body: ReadEventDetailsDTO) => {
+        try {
+            const eventID = body.eventID;
+            const event = await this.getEventByEventID(eventID);
+
+            return { message: 'Successfully retrieve event details.', event: event };
+        } catch (error) {
             console.log(error);
             throw error;
         }
@@ -65,22 +88,34 @@ class EventService implements BaseService {
     };
 
     private getEventByEventID = async (eventID: number) => {
-        const queryBuilder = this.eventRepository.createQueryBuilder();
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
         const event = await queryBuilder
-            .select([
-                'event.eventID',
-                'event.date',
-                'event.startTime',
-                'event.endTime',
-                'event.longitude',
-                'event.latitude',
-                'event.description',
-                'event.eventCreator',
-            ])
-            .from(Event, 'event')
+            .innerJoinAndSelect('event.categories', 'categories')
+            .innerJoin('event.eventCreator', 'event_creator')
+            .addSelect(['event_creator.firstName', 'event_creator.lastName', 'event_creator.username'])
             .where('event.eventID = :eventID', { eventID: eventID })
             .getOne();
-        return event;
+        return event as Event;
+    };
+
+    private getEventsByCategories = async (categories: string[]) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
+        const events = await queryBuilder
+            .select([
+                'event.eventID',
+                'event.eventName',
+                'event.date',
+                'event.longitude',
+                'event.latitude',
+                'event_creator.username',
+                'event_creator.firstName',
+                'event_creator.lastName',
+            ])
+            .innerJoin('event.categories', 'categories')
+            .innerJoin('event.eventCreator', 'event_creator')
+            .where('event_categories.category_id IN (:...categories)', { categories: categories })
+            .getMany();
+        return events as Event[];
     };
 
     private getEventCategories = async (event: Event) => {
@@ -116,14 +151,24 @@ class EventService implements BaseService {
         return user;
     };
 
+    private getAllCategoriesID = async () => {
+        const queryBuilder = this.categoryRepository.createQueryBuilder();
+        const categories = await queryBuilder
+            .select('preference.preferenceID')
+            .from(Preference, 'preference')
+            .getMany();
+        const categoryIDs = categories.map((category) => category.preferenceID);
+        return categoryIDs;
+    };
+
     private getCategoriesByID = async (preferenceIDs: string[]) => {
         const queryBuilder = this.categoryRepository.createQueryBuilder();
-        const preferences = await queryBuilder
+        const categories = await queryBuilder
             .select(['preference.preferenceID', 'preference.preferenceName'])
             .from(Preference, 'preference')
             .where('preference.preferenceID IN (:...preferenceIDs)', { preferenceIDs: preferenceIDs })
             .getMany();
-        return preferences;
+        return categories;
     };
 }
 

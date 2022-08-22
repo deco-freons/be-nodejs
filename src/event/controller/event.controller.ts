@@ -6,12 +6,15 @@ import authorizationMiddleware from '../../common/middleware/authorization.middl
 import validationMiddleware from '../../common/middleware/validation.middleware';
 import { RequestTypes } from '../../common/enum/request.enum';
 
-// import for other service
-
-// import untuk event service
 import EventService from '../service/event.service';
 import CreateEventDTO from '../dto/event.create.dto';
 import CreateEventRequest from '../request/event.create.request';
+import ReadEventDTO from '../dto/event.read.dto';
+import ReadEventRequest from '../request/event.read.request';
+import ReadEventResponse from '../response/event.read.response';
+import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
+import ReadEventDetailsRequest from '../request/event.readDetails.request';
+import ReadEventDetailsResponse from '../response/event.readDetails.response';
 import { CreateEventResponse } from '../response/event.create.response';
 
 class EventController implements BaseController {
@@ -32,6 +35,16 @@ class EventController implements BaseController {
             [authorizationMiddleware, validationMiddleware(CreateEventDTO, RequestTypes.BODY)],
             this.createEventHandler,
         );
+        this.router.post(
+            '/read',
+            [authorizationMiddleware, validationMiddleware(ReadEventDTO, RequestTypes.BODY)],
+            this.readEventHandler,
+        );
+        this.router.post(
+            '/read/detail',
+            [authorizationMiddleware, validationMiddleware(ReadEventDetailsDTO, RequestTypes.BODY)],
+            this.readEventDetailsHandler,
+        );
     }
 
     private createEventHandler = async (
@@ -44,6 +57,30 @@ class EventController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.createEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readEventHandler = async (request: ReadEventRequest, response: ReadEventResponse, next: NextFunction) => {
+        try {
+            const body = request.body;
+            const serviceResponse = await this.service.readEvent(body);
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readEventDetailsHandler = async (
+        request: ReadEventDetailsRequest,
+        response: ReadEventDetailsResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const serviceResponse = await this.service.readEventDetails(body);
+            return response.send({ statusCode: 200, message: serviceResponse.message, event: serviceResponse.event });
         } catch (error) {
             next(error);
         }
