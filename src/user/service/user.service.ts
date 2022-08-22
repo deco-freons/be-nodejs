@@ -95,16 +95,6 @@ class UserService implements BaseService {
         return userData;
     };
 
-    private getPreferencesByID = async (preferenceIDs: string[]) => {
-        const queryBuilder = this.preferenceRepository.createQueryBuilder();
-        const preferences = await queryBuilder
-            .select(['preference.preferenceID', 'preference.preferenceName'])
-            .from(Preference, 'preference')
-            .where('preference.preferenceID IN (:...preferenceIDs)', { preferenceIDs: preferenceIDs })
-            .getMany();
-        return preferences;
-    };
-
     private getUserByEmailAndUsername = async (email: string, username: string) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
@@ -124,6 +114,16 @@ class UserService implements BaseService {
             .andWhere('user.username = :username', { username: username })
             .getOne();
         return user;
+    };
+
+    private getPreferencesByID = async (preferenceIDs: string[]) => {
+        const queryBuilder = this.preferenceRepository.createQueryBuilder();
+        const preferences = await queryBuilder
+            .select(['preference.preferenceID', 'preference.preferenceName'])
+            .from(Preference, 'preference')
+            .where('preference.preferenceID IN (:...preferenceIDs)', { preferenceIDs: preferenceIDs })
+            .getMany();
+        return preferences;
     };
 
     private getUserPreferences = async (user: User) => {

@@ -13,6 +13,7 @@ import pinoLogger from './common/logger/pino.logger';
 
 import AuthController from './auth/controller/auth.controller';
 import UserController from './user/controller/user.controller';
+import EventController from './event/controller/event.controller';
 
 class App {
     public app: express.Application;
@@ -58,8 +59,11 @@ class App {
     private initControllers() {
         const AuthC = new AuthController(this.database);
         const UserC = new UserController(this.database);
+        const EventC = new EventController(this.database);
+        
         this.app.use(`${AuthC.path}`, AuthC.router);
         this.app.use(`${UserC.path}`, UserC.router);
+        this.app.use(`${EventC.path}`, EventC.router);
     }
 
     private initErrorHandler() {
