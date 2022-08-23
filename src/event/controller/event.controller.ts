@@ -17,10 +17,10 @@ import ReadEventDetailsRequest from '../request/event.readDetails.request';
 import ReadEventDetailsResponse from '../response/event.readDetails.response';
 import UpdateEventDTO from '../dto/event.update.dto';
 import UpdateEventRequest from '../request/event.update.request';
-import UpdateEventResponse from '../response/event.update.response';
 import DeleteEventDTO from '../dto/event.delete.dto';
-import { CreateEventResponse } from '../response/event.create.response';
 import DeleteEventRequest from '../request/event.delete.request';
+import { CreateEventResponse } from '../response/event.create.response';
+import { UpdateEventResponse } from '../response/event.update.response';
 import { DeleteEventResponse } from '../response/event.delete.response';
 
 class EventController implements BaseController {
@@ -109,22 +109,28 @@ class EventController implements BaseController {
     ) => {
         try {
             const body = request.body;
-            const serviceResponse = await this.service.updateEvent(body);
+            const locals = response.locals;
+            const serviceResponse = await this.service.updateEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
         } catch (error) {
             next(error);
         }
     };
 
-    private deleteEventHandler = async (request: DeleteEventRequest, response: DeleteEventResponse, next: NextFunction) => {
+    private deleteEventHandler = async (
+        request: DeleteEventRequest,
+        response: DeleteEventResponse,
+        next: NextFunction,
+    ) => {
         try {
             const body = request.body;
-            const serviceResponse = await this.service.deleteEvent(body);
+            const locals = response.locals;
+            const serviceResponse = await this.service.deleteEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
         } catch (error) {
             next(error);
         }
-    }
+    };
 }
 
 export default EventController;

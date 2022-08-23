@@ -1,8 +1,9 @@
 import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 
 import BaseService from '../../common/service/base.service';
-import NotFoundException from '../../common/exception/notFound.exception';
 import BadRequestException from '../../common/exception/badRequest.exception';
+import NotFoundException from '../../common/exception/notFound.exception';
+import UnauthorizedException from '../../common/exception/unauthorized.exception';
 
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
@@ -12,8 +13,10 @@ import CreateEventDTO from '../dto/event.create.dto';
 import ReadEventDTO from '../dto/event.read.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
-import { CreateEventResponseLocals } from '../response/event.create.response';
 import DeleteEventDTO from '../dto/event.delete.dto';
+import { CreateEventResponseLocals } from '../response/event.create.response';
+import { UpdateEventResponseLocals } from '../response/event.update.response';
+import { DeleteEventResponseLocals } from '../response/event.delete.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -80,11 +83,15 @@ class EventService implements BaseService {
         }
     };
 
-    public updateEvent = async (body: UpdateEventDTO) => {
+    public updateEvent = async (body: UpdateEventDTO, locals: UpdateEventResponseLocals) => {
         try {
+            const username = locals.username;
+
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
             if (!event) throw new NotFoundException('Event does not exist.');
+            if (event.eventCreator.username != username)
+                throw new UnauthorizedException(`You are unauthorized to update ${event.eventName} event.`);
 
             await this.updateEventDetails(body, eventID);
 
@@ -100,11 +107,14 @@ class EventService implements BaseService {
         }
     };
 
-    public deleteEvent = async (body: DeleteEventDTO) => {
+    public deleteEvent = async (body: DeleteEventDTO, locals: DeleteEventResponseLocals) => {
         try {
+            const username = locals.username;
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
             if (!event) throw new NotFoundException('Event does not exist.');
+            if (event.eventCreator.username != username)
+                throw new UnauthorizedException(`You are unauthorized to delete ${event.eventName} event.`);
 
             await this.deleteEventByEventID(eventID);
 
