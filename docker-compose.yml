@@ -11,7 +11,7 @@ services:
         build:
             dockerfile: Dockerfile
         ports:
-            - "5001:${PORT}"
+            - '5001:${PORT}'
         environment:
             - ORIGIN=${ORIGIN}
             - HOST=${HOST}
@@ -21,6 +21,8 @@ services:
             - DB_NAME=${DB_NAME}
             - DB_USERNAME=${DB_USERNAME}
             - DB_PASSWORD=${DB_PASSWORD}
+            - MAILER_USER=${MAILER_USER}
+            - MAILER_PASSWORD=${MAILER_PASSWORD}
             - REDIS_HOST=${REDIS_HOST}
             - REDIS_PORT=${REDIS_PORT}
             - ENV=PROD
