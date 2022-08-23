@@ -13,6 +13,7 @@ import ReadEventDTO from '../dto/event.read.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
+import DeleteEventDTO from '../dto/event.delete.dto';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -93,7 +94,21 @@ class EventService implements BaseService {
 
             await this.updateEventCategories(event, categories);
 
-            return { message: `Successfully create ${event.eventName} event.` };
+            return { message: `Successfully update ${event.eventName} event.` };
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    public deleteEvent = async (body: DeleteEventDTO) => {
+        try {
+            const eventID = body.eventID;
+            const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
+
+            await this.deleteEventByEventID(eventID);
+
+            return { message: `Successfully delete ${event.eventName} event.` };
         } catch (error) {
             throw error;
         }
@@ -205,6 +220,11 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const oldCategories = await this.getEventCategories(event);
         await queryBuilder.relation(Event, 'categories').of(event).addAndRemove(categories, oldCategories);
+    };
+
+    private deleteEventByEventID = async (eventID: number) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        await queryBuilder.delete().from(Event).where('eventID = :eventID', { eventID: eventID }).execute();
     };
 }
 
