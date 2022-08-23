@@ -3,6 +3,7 @@ import { getDistance } from 'geolib';
 
 import BaseService from '../../common/service/base.service';
 import BadRequestException from '../../common/exception/badRequest.exception';
+import ConflictException from '../../common/exception/conflict.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
 import UnauthorizedException from '../../common/exception/unauthorized.exception';
 
@@ -15,11 +16,13 @@ import CreateEventDTO from '../dto/event.create.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
+import EventUserDTO from '../dto/event.user.dto';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
+import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
-import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
+import { EventUserResponseLocals } from '../response/event.user.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -56,6 +59,7 @@ class EventService implements BaseService {
             };
             const event = await this.createEventDetails(eventData);
             await this.updateEventCategories(event, categories);
+            await this.createEventJoinedByUser(user, event);
 
             return { message: `Successfully create ${event.eventName} event.` };
         } catch (error) {
@@ -137,11 +141,39 @@ class EventService implements BaseService {
         }
     };
 
+    public joinEvent = async (body: EventUserDTO, locals: EventUserResponseLocals) => {
+        try {
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventID = body.eventID;
+            const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
+
+            await this.createEventJoinedByUser(user, event);
+
+            return { message: `Successfully joined ${event.eventName} event.` };
+        } catch (error) {
+            throw error;
+        }
+    };
+
     private createEventDetails = async (eventData: Partial<Event>) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const eventInsertResult = await queryBuilder.insert().into(Event).values(eventData).returning('*').execute();
         const event = eventInsertResult.generatedMaps[0] as Event;
         return event;
+    };
+
+    private createEventJoinedByUser = async (user: User, event: Event) => {
+        try {
+            const queryBuilder = this.userRepository.createQueryBuilder();
+            await queryBuilder.relation(User, 'eventJoined').of(user).add(event);
+        } catch (error) {
+            throw new ConflictException(`You already joined the ${event.eventName} event.`);
+        }
     };
 
     private getEventByEventID = async (eventID: number) => {

@@ -16,12 +16,15 @@ import UpdateEventDTO from '../dto/event.update.dto';
 import UpdateEventRequest from '../request/event.update.request';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import DeleteEventRequest from '../request/event.delete.request';
+import EventUserDTO from '../dto/event.user.dto';
+import EventUserRequest from '../request/event.user.request';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponse } from '../response/event.create.response';
 import { ReadEventRequest } from '../request/event.read.request';
+import { ReadEventDetailsResponse } from '../response/event.readDetails.response';
 import { UpdateEventResponse } from '../response/event.update.response';
 import { DeleteEventResponse } from '../response/event.delete.response';
-import { ReadEventDetailsResponse } from '../response/event.readDetails.response';
+import { EventUserResponse } from '../response/event.user.response';
 
 class EventController implements BaseController {
     path: string;
@@ -64,6 +67,11 @@ class EventController implements BaseController {
             '/delete',
             [authorizationMiddleware, validationMiddleware(DeleteEventDTO, RequestTypes.BODY)],
             this.deleteEventHandler,
+        );
+        this.router.post(
+            '/join',
+            [authorizationMiddleware, validationMiddleware(EventUserDTO, RequestTypes.BODY)],
+            this.joinEventHandler,
         );
     }
 
@@ -137,6 +145,17 @@ class EventController implements BaseController {
             const body = request.body;
             const locals = response.locals;
             const serviceResponse = await this.service.deleteEvent(body, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private joinEventHandler = async (request: EventUserRequest, response: EventUserResponse, next: NextFunction) => {
+        try {
+            const body = request.body;
+            const locals = response.locals;
+            const serviceResponse = await this.service.joinEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
         } catch (error) {
             next(error);

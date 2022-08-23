@@ -87,7 +87,21 @@ class User {
     preferences: Preference[];
 
     @OneToMany(() => Event, (event) => event.eventCreator)
-    eventCreated: Event[]
+    eventCreated: Event[];
+
+    @ManyToMany(() => Event)
+    @JoinTable({
+        name: 'user_joined_event',
+        joinColumn: {
+            name: 'user_id',
+            referencedColumnName: 'userID',
+        },
+        inverseJoinColumn: {
+            name: 'event_id',
+            referencedColumnName: 'eventID',
+        },
+    })
+    eventJoined: Event[];
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
