@@ -11,6 +11,7 @@ import Event from '../entity/event.entity';
 import CreateEventDTO from '../dto/event.create.dto';
 import ReadEventDTO from '../dto/event.read.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
+import UpdateEventDTO from '../dto/event.update.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 
 class EventService implements BaseService {
@@ -63,7 +64,6 @@ class EventService implements BaseService {
 
             return { message: 'Successfully retrieve events.', events: events };
         } catch (error) {
-            console.log(error);
             throw error;
         }
     };
@@ -75,7 +75,26 @@ class EventService implements BaseService {
 
             return { message: 'Successfully retrieve event details.', event: event };
         } catch (error) {
-            console.log(error);
+            throw error;
+        }
+    };
+
+    public updateEvent = async (body: UpdateEventDTO) => {
+        try {
+            const eventID = body.eventID;
+            const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
+
+            await this.updateEventDetails(body, eventID);
+
+            const categoryIDs = body.categories;
+            const categories = await this.getCategoriesByID(categoryIDs);
+            if (!categories) throw new BadRequestException('Categories Invalid.');
+
+            await this.updateEventCategories(event, categories);
+
+            return { message: `Successfully create ${event.eventName} event.` };
+        } catch (error) {
             throw error;
         }
     };
@@ -124,10 +143,24 @@ class EventService implements BaseService {
         return categories;
     };
 
-    private updateEventCategories = async (event: Event, categories: Preference[]) => {
-        const queryBuilder = this.eventRepository.createQueryBuilder();
-        const oldCategories = await this.getEventCategories(event);
-        await queryBuilder.relation(Event, 'categories').of(event).addAndRemove(categories, oldCategories);
+    private getAllCategoriesID = async () => {
+        const queryBuilder = this.categoryRepository.createQueryBuilder();
+        const categories = await queryBuilder
+            .select('preference.preferenceID')
+            .from(Preference, 'preference')
+            .getMany();
+        const categoryIDs = categories.map((category) => category.preferenceID);
+        return categoryIDs;
+    };
+
+    private getCategoriesByID = async (preferenceIDs: string[]) => {
+        const queryBuilder = this.categoryRepository.createQueryBuilder();
+        const categories = await queryBuilder
+            .select(['preference.preferenceID', 'preference.preferenceName'])
+            .from(Preference, 'preference')
+            .where('preference.preferenceID IN (:...preferenceIDs)', { preferenceIDs: preferenceIDs })
+            .getMany();
+        return categories;
     };
 
     private getUserByEmailAndUsername = async (email: string, username: string) => {
@@ -151,24 +184,27 @@ class EventService implements BaseService {
         return user;
     };
 
-    private getAllCategoriesID = async () => {
-        const queryBuilder = this.categoryRepository.createQueryBuilder();
-        const categories = await queryBuilder
-            .select('preference.preferenceID')
-            .from(Preference, 'preference')
-            .getMany();
-        const categoryIDs = categories.map((category) => category.preferenceID);
-        return categoryIDs;
+    private updateEventDetails = async (body: UpdateEventDTO, eventID: number) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        await queryBuilder
+            .update(Event)
+            .set({
+                eventName: body.eventName,
+                date: body.date,
+                startTime: body.startTime,
+                endTime: body.endTime,
+                longitude: body.longitude,
+                latitude: body.latitude,
+                description: body.description,
+            })
+            .where('eventID = :eventID', { eventID: eventID })
+            .execute();
     };
 
-    private getCategoriesByID = async (preferenceIDs: string[]) => {
-        const queryBuilder = this.categoryRepository.createQueryBuilder();
-        const categories = await queryBuilder
-            .select(['preference.preferenceID', 'preference.preferenceName'])
-            .from(Preference, 'preference')
-            .where('preference.preferenceID IN (:...preferenceIDs)', { preferenceIDs: preferenceIDs })
-            .getMany();
-        return categories;
+    private updateEventCategories = async (event: Event, categories: Preference[]) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        const oldCategories = await this.getEventCategories(event);
+        await queryBuilder.relation(Event, 'categories').of(event).addAndRemove(categories, oldCategories);
     };
 }
 

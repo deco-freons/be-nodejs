@@ -15,6 +15,9 @@ import ReadEventResponse from '../response/event.read.response';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import ReadEventDetailsRequest from '../request/event.readDetails.request';
 import ReadEventDetailsResponse from '../response/event.readDetails.response';
+import UpdateEventDTO from '../dto/event.update.dto';
+import UpdateEventRequest from '../request/event.update.request';
+import UpdateEventResponse from '../response/event.update.response';
 import { CreateEventResponse } from '../response/event.create.response';
 
 class EventController implements BaseController {
@@ -44,6 +47,11 @@ class EventController implements BaseController {
             '/read/detail',
             [authorizationMiddleware, validationMiddleware(ReadEventDetailsDTO, RequestTypes.BODY)],
             this.readEventDetailsHandler,
+        );
+        this.router.post(
+            '/update',
+            [authorizationMiddleware, validationMiddleware(UpdateEventDTO, RequestTypes.BODY)],
+            this.updateEventHandler,
         );
     }
 
@@ -81,6 +89,19 @@ class EventController implements BaseController {
             const body = request.body;
             const serviceResponse = await this.service.readEventDetails(body);
             return response.send({ statusCode: 200, message: serviceResponse.message, event: serviceResponse.event });
+        } catch (error) {
+            next(error);
+        }
+    };
+    private updateEventHandler = async (
+        request: UpdateEventRequest,
+        response: UpdateEventResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const serviceResponse = await this.service.updateEvent(body);
+            return response.send({ statusCode: 200, message: serviceResponse.message });
         } catch (error) {
             next(error);
         }
