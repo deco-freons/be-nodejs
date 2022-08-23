@@ -160,6 +160,25 @@ class EventService implements BaseService {
         }
     };
 
+    public cancelEvent = async (body: EventUserDTO, locals: EventUserResponseLocals) => {
+        try {
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventID = body.eventID;
+            const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
+
+            await this.cancelEventJoinedByUser(user, event);
+
+            return { message: `Successfully cancelled ${event.eventName} event.` };
+        } catch (error) {
+            throw error;
+        }
+    };
+
     private createEventDetails = async (eventData: Partial<Event>) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const eventInsertResult = await queryBuilder.insert().into(Event).values(eventData).returning('*').execute();
@@ -174,6 +193,11 @@ class EventService implements BaseService {
         } catch (error) {
             throw new ConflictException(`You already joined the ${event.eventName} event.`);
         }
+    };
+
+    private cancelEventJoinedByUser = async (user: User, event: Event) => {
+        const queryBuilder = this.userRepository.createQueryBuilder();
+        await queryBuilder.relation(User, 'eventJoined').of(user).remove(event);
     };
 
     private getEventByEventID = async (eventID: number) => {

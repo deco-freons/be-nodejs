@@ -73,6 +73,11 @@ class EventController implements BaseController {
             [authorizationMiddleware, validationMiddleware(EventUserDTO, RequestTypes.BODY)],
             this.joinEventHandler,
         );
+        this.router.delete(
+            '/cancel',
+            [authorizationMiddleware, validationMiddleware(EventUserDTO, RequestTypes.BODY)],
+            this.cancelEventHandler,
+        );
     }
 
     private createEventHandler = async (
@@ -156,6 +161,17 @@ class EventController implements BaseController {
             const body = request.body;
             const locals = response.locals;
             const serviceResponse = await this.service.joinEvent(body, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private cancelEventHandler = async (request: EventUserRequest, response: EventUserResponse, next: NextFunction) => {
+        try {
+            const body = request.body;
+            const locals = response.locals;
+            const serviceResponse = await this.service.cancelEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
         } catch (error) {
             next(error);
