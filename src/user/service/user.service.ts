@@ -5,6 +5,7 @@ import BadRequestException from '../../common/exception/badRequest.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
 
 import User from '../../auth/entity/user.entity';
+import Event from '../../event/entity/event.entity';
 
 import Preference from '../entity/preference.entity';
 import UserPreferenceDTO from '../dto/user.preference.dto';
@@ -16,10 +17,12 @@ import { UpdateUserResponseLocals } from '../response/user.update.response';
 class UserService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
     preferenceRepository: Repository<ObjectLiteral>;
+    eventRepository: Repository<ObjectLiteral>;
 
     constructor(database: DataSource) {
         this.userRepository = database.getRepository(User);
         this.preferenceRepository = database.getRepository(Preference);
+        this.eventRepository = database.getRepository(Event);
     }
 
     public upsertUserPreference = async (body: UserPreferenceDTO, locals: UpsertUserPreferenceResponseLocals) => {
@@ -49,10 +52,12 @@ class UserService implements BaseService {
             if (!user) throw new NotFoundException('User does not exist.');
 
             const preferences = await this.getUserPreferences(user);
-            const userData = this.constructUserData(user, preferences);
+            const events = await this.getUserEvents(user.userID);
+            const userData = this.constructUserDataWithEvents(user, preferences, events);
 
             return { message: 'Successfully retrieved user details.', userData: userData };
         } catch (error) {
+            console.log(error);
             throw error;
         }
     };
@@ -95,6 +100,12 @@ class UserService implements BaseService {
         return userData;
     };
 
+    private constructUserDataWithEvents = (user: User, preferences: Preference[], events: Event[]) => {
+        const userData = this.constructUserData(user, preferences);
+        userData.eventCreated = events;
+        return userData;
+    };
+
     private getUserByEmailAndUsername = async (email: string, username: string) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         const user = await queryBuilder
@@ -104,7 +115,6 @@ class UserService implements BaseService {
                 'user.firstName',
                 'user.lastName',
                 'user.email',
-                'user.password',
                 'user.birthDate',
                 'user.isVerified',
                 'user.isFirstLogin',
@@ -114,6 +124,25 @@ class UserService implements BaseService {
             .andWhere('user.username = :username', { username: username })
             .getOne();
         return user;
+    };
+
+    private getUserEvents = async (userID: number) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
+        const events = await queryBuilder
+            .select([
+                'event.eventID',
+                'event.eventName',
+                'event.date',
+                'event.longitude',
+                'event.latitude',
+                'categories.preferenceID',
+                'categories.preferenceName',
+            ])
+            .innerJoin('event.categories', 'categories')
+            .innerJoin('event.eventCreator', 'event_creator')
+            .where('event.eventCreator = :userID', { userID: userID })
+            .getMany();
+        return events as Event[];
     };
 
     private getPreferencesByID = async (preferenceIDs: string[]) => {
