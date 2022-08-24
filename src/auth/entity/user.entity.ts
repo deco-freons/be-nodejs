@@ -4,10 +4,12 @@ import {
     Entity,
     JoinTable,
     ManyToMany,
+    OneToMany,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 import Preference from '../../user/entity/preference.entity';
+import Event from '../../event/entity/event.entity';
 
 /**
  * @openapi
@@ -83,6 +85,9 @@ class User {
         },
     })
     preferences: Preference[];
+
+    @OneToMany(() => Event, (event) => event.eventCreator)
+    eventCreated: Event[]
 
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;

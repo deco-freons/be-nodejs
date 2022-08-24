@@ -1,0 +1,14 @@
+import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/response/base.response';
+
+interface UpdateEventResponse<ResBody = UpdateEventResponseBody, Locals = UpdateEventResponseLocals>
+    extends BaseResponse<ResBody, Locals> {}
+
+interface UpdateEventResponseBody extends BaseResponseBody {}
+
+interface UpdateEventResponseLocals extends BaseLocals {
+    email: string;
+    username: string;
+    isVerified: string;
+}
+
+export { UpdateEventResponse, UpdateEventResponseLocals };
