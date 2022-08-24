@@ -19,6 +19,7 @@ import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
+import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -83,12 +84,13 @@ class EventService implements BaseService {
         }
     };
 
-    public readEventDetails = async (body: ReadEventDetailsDTO) => {
+    public readEventDetails = async (body: ReadEventDetailsDTO, locals: ReadEventDetailsResponseLocals) => {
         try {
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
+            const isEventCreator = locals.username == event.eventCreator.username ? true : false;
 
-            return { message: 'Successfully retrieve event details.', event: event };
+            return { message: 'Successfully retrieve event details.', isEventCreator: isEventCreator, event: event };
         } catch (error) {
             throw error;
         }

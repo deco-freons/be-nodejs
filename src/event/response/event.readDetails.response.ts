@@ -6,9 +6,14 @@ interface ReadEventDetailsResponse<ResBody = ReadEventDetailsResponseBody, Local
     extends BaseResponse<ResBody, Locals> {}
 
 interface ReadEventDetailsResponseBody extends BaseResponseBody {
+    isEventCreator: boolean;
     event: Event;
 }
 
-interface ReadEventDetailsResponseLocals extends BaseLocals {}
+interface ReadEventDetailsResponseLocals extends BaseLocals {
+    email: string;
+    username: string;
+    isVerified: string;
+}
 
-export default ReadEventDetailsResponse;
+export { ReadEventDetailsResponse, ReadEventDetailsResponseLocals };
