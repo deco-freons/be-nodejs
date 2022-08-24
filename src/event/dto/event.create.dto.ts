@@ -18,10 +18,10 @@ class CreateEventDTO {
     endTime: string;
 
     @IsLongitude()
-    longitude: string;
+    longitude: number;
 
     @IsLatitude()
-    latitude: string;
+    latitude: number;
 
     @IsString()
     description: string;

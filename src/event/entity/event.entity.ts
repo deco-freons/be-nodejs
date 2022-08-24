@@ -33,11 +33,11 @@ class Event {
     @Column({ name: 'end_time' })
     endTime: string;
 
-    @Column({ name: 'longitude' })
-    longitude: string;
+    @Column({ name: 'longitude', type: 'float' })
+    longitude: number;
 
-    @Column({ name: 'latitude' })
-    latitude: string;
+    @Column({ name: 'latitude', type: 'float' })
+    latitude: number;
 
     @Column({ name: 'description' })
     description: string;
