@@ -12,10 +12,10 @@ import Preference from '../../user/entity/preference.entity';
 import Event from '../entity/event.entity';
 import EventDetails from '../entity/event.details';
 import CreateEventDTO from '../dto/event.create.dto';
-import ReadEventDTO from '../dto/event.read.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
+import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
@@ -62,8 +62,11 @@ class EventService implements BaseService {
         }
     };
 
-    public readEvent = async (body: ReadEventDTO) => {
+    public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
         try {
+            const begin = parseInt(query.skip) * parseInt(query.take);
+            const end = begin + parseInt(query.take);
+
             let categories = body.categories;
             if (!categories) categories = await this.getAllCategoriesID();
             const events = await this.getEventsByCategories(categories);
@@ -72,7 +75,7 @@ class EventService implements BaseService {
                 body.longitude,
                 body.latitude,
                 body.radius,
-            );
+            ).slice(begin, end);
 
             return { message: 'Successfully retrieve events.', events: sortedAndFilteredEventsWithinRadius };
         } catch (error) {

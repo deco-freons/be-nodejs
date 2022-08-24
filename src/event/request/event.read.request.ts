@@ -1,6 +1,11 @@
-import { BaseRequest } from '../../common/request/base.request';
-import ReadEventDTO from '../dto/event.read.dto';
+import { BaseRequest, BaseRequestQuery } from '../../common/request/base.request';
+import { ReadEventDTO } from '../dto/event.read.dto';
 
-interface ReadEventRequest extends BaseRequest<unknown, unknown, ReadEventDTO, unknown, unknown> {}
+interface ReadEventRequestQuery extends BaseRequestQuery {
+    skip: string;
+    take: string;
+}
 
-export default ReadEventRequest;
+interface ReadEventRequest extends BaseRequest<unknown, unknown, ReadEventDTO, ReadEventRequestQuery, unknown> {}
+
+export { ReadEventRequest, ReadEventRequestQuery };

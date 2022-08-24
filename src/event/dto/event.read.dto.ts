@@ -1,4 +1,4 @@
-import { IsIn, IsLatitude, IsLongitude, IsNumber, IsOptional } from 'class-validator';
+import { IsIn, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString } from 'class-validator';
 
 class ReadEventDTO {
     @IsIn(['GM', 'MV', 'DC', 'CL', 'BB', 'NT', 'FB'], { each: true })
@@ -13,10 +13,14 @@ class ReadEventDTO {
 
     @IsNumber()
     radius: number;
-
-    @IsNumber()
-    @IsOptional()
-    pagination: number;
 }
 
-export default ReadEventDTO;
+class ReadEventQueryDTO {
+    @IsString()
+    skip: string;
+
+    @IsString()
+    take: string;
+}
+
+export { ReadEventDTO, ReadEventQueryDTO };
