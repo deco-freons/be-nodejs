@@ -1,13 +1,12 @@
 import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/response/base.response';
-
-import Event from '../entity/event.entity';
+import EventDetails from '../entity/event.details';
 
 interface ReadEventDetailsResponse<ResBody = ReadEventDetailsResponseBody, Locals = ReadEventDetailsResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
 interface ReadEventDetailsResponseBody extends BaseResponseBody {
     isEventCreator: boolean;
-    event: Event;
+    event: EventDetails;
 }
 
 interface ReadEventDetailsResponseLocals extends BaseLocals {

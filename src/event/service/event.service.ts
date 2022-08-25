@@ -44,7 +44,7 @@ class EventService implements BaseService {
 
             const categoryIDs = body.categories;
             const categories = await this.getCategoriesByID(categoryIDs);
-            if (!categories) throw new BadRequestException('Catgeory Invalid.');
+            if (!categories) throw new BadRequestException('Categeory Invalid.');
 
             const eventData: Partial<Event> = {
                 eventName: body.eventName,
@@ -92,9 +92,16 @@ class EventService implements BaseService {
         try {
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
+            const participants = await this.getEventParticipants(event);
+            const eventDetails = this.constructEventDetailsData(event, participants);
+
             const isEventCreator = locals.username == event.eventCreator.username ? true : false;
 
-            return { message: 'Successfully retrieve event details.', isEventCreator: isEventCreator, event: event };
+            return {
+                message: 'Successfully retrieve event details.',
+                isEventCreator: isEventCreator,
+                event: eventDetails,
+            };
         } catch (error) {
             throw error;
         }
@@ -237,6 +244,12 @@ class EventService implements BaseService {
         return categories;
     };
 
+    private getEventParticipants = async (event: Event) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
+        return participants;
+    };
+
     private getAllCategoriesID = async () => {
         const queryBuilder = this.categoryRepository.createQueryBuilder();
         const categories = await queryBuilder
@@ -341,6 +354,35 @@ class EventService implements BaseService {
 
     private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
         return event1.distance > event2.distance ? 1 : -1;
+    };
+
+    private constructEventDetailsData = (event: Event, participants: User[]) => {
+        const participantsList = participants.map((participant) => this.constructParticipantData(participant));
+        const eventDetailsData: EventDetails = {
+            eventID: event.eventID,
+            eventName: event.eventName,
+            categories: event.categories,
+            date: event.date,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            longitude: event.longitude,
+            latitude: event.latitude,
+            description: event.description,
+            eventCreator: event.eventCreator,
+            participants: participants.length,
+            participantsList: participantsList,
+        };
+        return eventDetailsData;
+    };
+
+    private constructParticipantData = (user: User) => {
+        const participantData: Partial<User> = {
+            userID: user.userID,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+        };
+        return participantData;
     };
 }
 

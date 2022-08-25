@@ -89,7 +89,7 @@ class User {
     @OneToMany(() => Event, (event) => event.eventCreator)
     eventCreated: Event[];
 
-    @ManyToMany(() => Event)
+    @ManyToMany(() => Event, (event) => event.participants)
     @JoinTable({
         name: 'user_joined_event',
         joinColumn: {

@@ -45,6 +45,9 @@ class Event {
     @ManyToOne(() => User)
     @JoinColumn({ name: 'event_creator', referencedColumnName: 'userID' })
     eventCreator: User;
+
+    @ManyToMany(() => User, (user) => user.eventJoined )
+    participants: User[]
 }
 
 export default Event;
