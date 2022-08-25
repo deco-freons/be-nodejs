@@ -1,15 +1,10 @@
-import { IsIn, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
+import UserLongLatDTO from '../../user/dto/user.longlat.dto';
 
-class ReadEventDTO {
+class ReadEventDTO extends UserLongLatDTO {
     @IsIn(['GM', 'MV', 'DC', 'CL', 'BB', 'NT', 'FB'], { each: true })
     @IsOptional()
     categories: string[];
-
-    @IsLongitude()
-    longitude: number;
-
-    @IsLatitude()
-    latitude: number;
 
     @IsNumber()
     radius: number;
