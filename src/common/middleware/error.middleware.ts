@@ -6,7 +6,7 @@ import { BaseResponse } from '../response/base.response';
 
 async function errorMiddleware(error: Error, _request: BaseRequest, response: BaseResponse, _next: NextFunction) {
     let statusCode = 500;
-    let message = 'Internal Server Error';
+    let message = `Internal Server Error. ${error.message}`;
 
     if (error instanceof BaseException) {
         statusCode = error.statusCode;

@@ -4,6 +4,7 @@ import { getDistance } from 'geolib';
 import BaseService from '../../common/service/base.service';
 import BadRequestException from '../../common/exception/badRequest.exception';
 import ConflictException from '../../common/exception/conflict.exception';
+import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
 import UnauthorizedException from '../../common/exception/unauthorized.exception';
 
@@ -177,6 +178,7 @@ class EventService implements BaseService {
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
             if (!event) throw new NotFoundException('Event does not exist.');
+            if(event.eventCreator.username == username) throw new ForbiddenException('You are not allowed to take this action on your own event.')
 
             await this.cancelEventJoinedByUser(user, event);
 
