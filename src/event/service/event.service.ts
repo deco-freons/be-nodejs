@@ -1,4 +1,5 @@
 import { Repository, ObjectLiteral, DataSource } from 'typeorm';
+import { getDistance } from 'geolib';
 
 import BaseService from '../../common/service/base.service';
 import BadRequestException from '../../common/exception/badRequest.exception';
@@ -9,14 +10,16 @@ import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
 
 import Event from '../entity/event.entity';
+import EventDetails from '../entity/event.details';
 import CreateEventDTO from '../dto/event.create.dto';
-import ReadEventDTO from '../dto/event.read.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
+import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
+import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -60,24 +63,34 @@ class EventService implements BaseService {
         }
     };
 
-    public readEvent = async (body: ReadEventDTO) => {
+    public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
         try {
+            const begin = parseInt(query.skip) * parseInt(query.take);
+            const end = begin + parseInt(query.take);
+
             let categories = body.categories;
             if (!categories) categories = await this.getAllCategoriesID();
             const events = await this.getEventsByCategories(categories);
+            const sortedAndFilteredEventsWithinRadius = this.getEventsWithinRadius(
+                events,
+                body.longitude,
+                body.latitude,
+                body.radius,
+            ).slice(begin, end);
 
-            return { message: 'Successfully retrieve events.', events: events };
+            return { message: 'Successfully retrieve events.', events: sortedAndFilteredEventsWithinRadius };
         } catch (error) {
             throw error;
         }
     };
 
-    public readEventDetails = async (body: ReadEventDetailsDTO) => {
+    public readEventDetails = async (body: ReadEventDetailsDTO, locals: ReadEventDetailsResponseLocals) => {
         try {
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
+            const isEventCreator = locals.username == event.eventCreator.username ? true : false;
 
-            return { message: 'Successfully retrieve event details.', event: event };
+            return { message: 'Successfully retrieve event details.', isEventCreator: isEventCreator, event: event };
         } catch (error) {
             throw error;
         }
@@ -235,6 +248,43 @@ class EventService implements BaseService {
     private deleteEventByEventID = async (eventID: number) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder.delete().from(Event).where('eventID = :eventID', { eventID: eventID }).execute();
+    };
+
+    private getEventsWithinRadius = (events: Event[], longitude: number, latitude: number, radius: number) => {
+        const eventsWithinRadius = events
+            .map((event) => this.constructEventsData(event, longitude, latitude))
+            .filter((event) => this.filterEventsWithinRadius(event, radius))
+            .sort((event1, event2) => this.sortEventsByDistance(event1, event2));
+        return eventsWithinRadius;
+    };
+
+    private constructEventsData = (event: Event, longitude: number, latitude: number) => {
+        const distance = this.calculateDistanceBetweenUserAndEventLocation(event, longitude, latitude);
+        const eventData: Partial<EventDetails> = {
+            eventID: event.eventID,
+            eventName: event.eventName,
+            date: event.eventName,
+            distance: distance,
+            longitude: event.longitude,
+            latitude: event.latitude,
+            eventCreator: event.eventCreator,
+        };
+        return eventData;
+    };
+
+    private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
+        const from = { longitude: longitude, latitude: latitude };
+        const to = { longitude: event.longitude, latitude: event.latitude };
+        const distance = parseFloat((getDistance(from, to) / 1000).toFixed(1));
+        return distance;
+    };
+
+    private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number) => {
+        return event.distance <= radius;
+    };
+
+    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
+        return event1.distance > event2.distance ? 1 : -1;
     };
 }
 

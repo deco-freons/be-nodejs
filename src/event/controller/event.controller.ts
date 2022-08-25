@@ -9,19 +9,19 @@ import { RequestTypes } from '../../common/enum/request.enum';
 import EventService from '../service/event.service';
 import CreateEventDTO from '../dto/event.create.dto';
 import CreateEventRequest from '../request/event.create.request';
-import ReadEventDTO from '../dto/event.read.dto';
-import ReadEventRequest from '../request/event.read.request';
 import ReadEventResponse from '../response/event.read.response';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import ReadEventDetailsRequest from '../request/event.readDetails.request';
-import ReadEventDetailsResponse from '../response/event.readDetails.response';
 import UpdateEventDTO from '../dto/event.update.dto';
 import UpdateEventRequest from '../request/event.update.request';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import DeleteEventRequest from '../request/event.delete.request';
+import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponse } from '../response/event.create.response';
+import { ReadEventRequest } from '../request/event.read.request';
 import { UpdateEventResponse } from '../response/event.update.response';
 import { DeleteEventResponse } from '../response/event.delete.response';
+import { ReadEventDetailsResponse } from '../response/event.readDetails.response';
 
 class EventController implements BaseController {
     path: string;
@@ -43,7 +43,11 @@ class EventController implements BaseController {
         );
         this.router.post(
             '/read',
-            [authorizationMiddleware, validationMiddleware(ReadEventDTO, RequestTypes.BODY)],
+            [
+                authorizationMiddleware,
+                validationMiddleware(ReadEventDTO, RequestTypes.BODY),
+                validationMiddleware(ReadEventQueryDTO, RequestTypes.QUERY),
+            ],
             this.readEventHandler,
         );
         this.router.post(
@@ -81,7 +85,8 @@ class EventController implements BaseController {
     private readEventHandler = async (request: ReadEventRequest, response: ReadEventResponse, next: NextFunction) => {
         try {
             const body = request.body;
-            const serviceResponse = await this.service.readEvent(body);
+            const query = request.query;
+            const serviceResponse = await this.service.readEvent(body, query);
             return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
         } catch (error) {
             next(error);
@@ -95,8 +100,14 @@ class EventController implements BaseController {
     ) => {
         try {
             const body = request.body;
-            const serviceResponse = await this.service.readEventDetails(body);
-            return response.send({ statusCode: 200, message: serviceResponse.message, event: serviceResponse.event });
+            const locals = response.locals;
+            const serviceResponse = await this.service.readEventDetails(body, locals);
+            return response.send({
+                statusCode: 200,
+                message: serviceResponse.message,
+                isEventCreator: serviceResponse.isEventCreator,
+                event: serviceResponse.event,
+            });
         } catch (error) {
             next(error);
         }
