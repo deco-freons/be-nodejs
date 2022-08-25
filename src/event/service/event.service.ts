@@ -91,10 +91,13 @@ class EventService implements BaseService {
 
     public readEventDetails = async (body: ReadEventDetailsDTO, locals: ReadEventDetailsResponseLocals) => {
         try {
+            const username = locals.username;
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
+
             const participants = await this.getEventParticipants(event);
-            const eventDetails = this.constructEventDetailsData(event, participants);
+            const participated = this.getParticipated(participants, username);
+            const eventDetails = this.constructEventDetailsData(event, participants, participated);
 
             const isEventCreator = locals.username == event.eventCreator.username ? true : false;
 
@@ -178,7 +181,8 @@ class EventService implements BaseService {
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
             if (!event) throw new NotFoundException('Event does not exist.');
-            if(event.eventCreator.username == username) throw new ForbiddenException('You are not allowed to take this action on your own event.')
+            if (event.eventCreator.username == username)
+                throw new ForbiddenException('You are not allowed to take this action at your own event.');
 
             await this.cancelEventJoinedByUser(user, event);
 
@@ -358,7 +362,7 @@ class EventService implements BaseService {
         return event1.distance > event2.distance ? 1 : -1;
     };
 
-    private constructEventDetailsData = (event: Event, participants: User[]) => {
+    private constructEventDetailsData = (event: Event, participants: User[], participated: boolean) => {
         const participantsList = participants.map((participant) => this.constructParticipantData(participant));
         const eventDetailsData: EventDetails = {
             eventID: event.eventID,
@@ -373,6 +377,7 @@ class EventService implements BaseService {
             eventCreator: event.eventCreator,
             participants: participants.length,
             participantsList: participantsList,
+            participated: participated,
         };
         return eventDetailsData;
     };
@@ -385,6 +390,15 @@ class EventService implements BaseService {
             lastName: user.lastName,
         };
         return participantData;
+    };
+
+    private getParticipated = (participants: User[], username: string) => {
+        const participated = participants.filter((participant) => this.filterParticipants(participant, username));
+        return participated.length == 1 ? true : false;
+    };
+
+    private filterParticipants = (participant: User, username: string) => {
+        return participant.username == username;
     };
 }
 

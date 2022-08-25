@@ -15,6 +15,7 @@ class EventDetails {
     eventCreator: User;
     participants: number;
     participantsList: Partial<User>[];
+    participated: boolean;
 }
 
 export default EventDetails;
