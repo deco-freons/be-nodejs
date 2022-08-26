@@ -3,6 +3,8 @@ import { getDistance } from 'geolib';
 
 import BaseService from '../../common/service/base.service';
 import BadRequestException from '../../common/exception/badRequest.exception';
+import ConflictException from '../../common/exception/conflict.exception';
+import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
 import UnauthorizedException from '../../common/exception/unauthorized.exception';
 
@@ -15,11 +17,13 @@ import CreateEventDTO from '../dto/event.create.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
+import EventUserDTO from '../dto/event.user.dto';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
+import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
-import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
+import { EventUserResponseLocals } from '../response/event.user.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -41,7 +45,7 @@ class EventService implements BaseService {
 
             const categoryIDs = body.categories;
             const categories = await this.getCategoriesByID(categoryIDs);
-            if (!categories) throw new BadRequestException('Catgeory Invalid.');
+            if (!categories) throw new BadRequestException('Categeory Invalid.');
 
             const eventData: Partial<Event> = {
                 eventName: body.eventName,
@@ -56,6 +60,7 @@ class EventService implements BaseService {
             };
             const event = await this.createEventDetails(eventData);
             await this.updateEventCategories(event, categories);
+            await this.createEventJoinedByUser(user, event);
 
             return { message: `Successfully create ${event.eventName} event.` };
         } catch (error) {
@@ -86,11 +91,21 @@ class EventService implements BaseService {
 
     public readEventDetails = async (body: ReadEventDetailsDTO, locals: ReadEventDetailsResponseLocals) => {
         try {
+            const username = locals.username;
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
+
+            const participants = await this.getEventParticipants(event);
+            const participated = this.getParticipated(participants, username);
+            const eventDetails = this.constructEventDetailsData(event, participants, participated);
+
             const isEventCreator = locals.username == event.eventCreator.username ? true : false;
 
-            return { message: 'Successfully retrieve event details.', isEventCreator: isEventCreator, event: event };
+            return {
+                message: 'Successfully retrieve event details.',
+                isEventCreator: isEventCreator,
+                event: eventDetails,
+            };
         } catch (error) {
             throw error;
         }
@@ -137,11 +152,65 @@ class EventService implements BaseService {
         }
     };
 
+    public joinEvent = async (body: EventUserDTO, locals: EventUserResponseLocals) => {
+        try {
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventID = body.eventID;
+            const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
+
+            await this.createEventJoinedByUser(user, event);
+
+            return { message: `Successfully joined ${event.eventName} event.` };
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    public cancelEvent = async (body: EventUserDTO, locals: EventUserResponseLocals) => {
+        try {
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventID = body.eventID;
+            const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
+            if (event.eventCreator.username == username)
+                throw new ForbiddenException('You are not allowed to take this action at your own event.');
+
+            await this.cancelEventJoinedByUser(user, event);
+
+            return { message: `Successfully cancelled ${event.eventName} event.` };
+        } catch (error) {
+            throw error;
+        }
+    };
+
     private createEventDetails = async (eventData: Partial<Event>) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const eventInsertResult = await queryBuilder.insert().into(Event).values(eventData).returning('*').execute();
         const event = eventInsertResult.generatedMaps[0] as Event;
         return event;
+    };
+
+    private createEventJoinedByUser = async (user: User, event: Event) => {
+        try {
+            const queryBuilder = this.userRepository.createQueryBuilder();
+            await queryBuilder.relation(User, 'eventJoined').of(user).add(event);
+        } catch (error) {
+            throw new ConflictException(`You already joined the ${event.eventName} event.`);
+        }
+    };
+
+    private cancelEventJoinedByUser = async (user: User, event: Event) => {
+        const queryBuilder = this.userRepository.createQueryBuilder();
+        await queryBuilder.relation(User, 'eventJoined').of(user).remove(event);
     };
 
     private getEventByEventID = async (eventID: number) => {
@@ -179,6 +248,12 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const categories = await queryBuilder.relation(Event, 'categories').of(event).loadMany();
         return categories;
+    };
+
+    private getEventParticipants = async (event: Event) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
+        return participants;
     };
 
     private getAllCategoriesID = async () => {
@@ -285,6 +360,45 @@ class EventService implements BaseService {
 
     private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
         return event1.distance > event2.distance ? 1 : -1;
+    };
+
+    private constructEventDetailsData = (event: Event, participants: User[], participated: boolean) => {
+        const participantsList = participants.map((participant) => this.constructParticipantData(participant));
+        const eventDetailsData: EventDetails = {
+            eventID: event.eventID,
+            eventName: event.eventName,
+            categories: event.categories,
+            date: event.date,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            longitude: event.longitude,
+            latitude: event.latitude,
+            description: event.description,
+            eventCreator: event.eventCreator,
+            participants: participants.length,
+            participantsList: participantsList,
+            participated: participated,
+        };
+        return eventDetailsData;
+    };
+
+    private constructParticipantData = (user: User) => {
+        const participantData: Partial<User> = {
+            userID: user.userID,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+        };
+        return participantData;
+    };
+
+    private getParticipated = (participants: User[], username: string) => {
+        const participated = participants.filter((participant) => this.filterParticipants(participant, username));
+        return participated.length == 1 ? true : false;
+    };
+
+    private filterParticipants = (participant: User, username: string) => {
+        return participant.username == username;
     };
 }
 

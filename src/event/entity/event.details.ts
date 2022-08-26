@@ -10,9 +10,12 @@ class EventDetails {
     endTime: string;
     longitude: number;
     latitude: number;
-    distance: number;
+    distance?: number;
     description: string;
     eventCreator: User;
+    participants: number;
+    participantsList: Partial<User>[];
+    participated: boolean;
 }
 
 export default EventDetails;

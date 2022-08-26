@@ -79,7 +79,7 @@ class UserService implements BaseService {
 
             const userData = this.constructUserData(user, preferences);
 
-            return { message: 'Successfully update user details', userData: userData };
+            return { message: 'Successfully update user details.', userData: userData };
         } catch (error) {
             throw error;
         }

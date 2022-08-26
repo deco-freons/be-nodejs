@@ -4,10 +4,11 @@ import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 import Mailer from '../../common/config/mailer';
 import Redis from '../../common/config/redis';
 import BadRequestException from '../../common/exception/badRequest.exception';
-import UnauthorizedException from '../../common/exception/unauthorized.exception';
+import ConflictException from '../../common/exception/conflict.exception';
 import ExpiredTokenException from '../../common/exception/expiredToken.exception';
-import NotFoundException from '../../common/exception/notFound.exception';
 import InternalServerErrorException from '../../common/exception/internalError.exception';
+import NotFoundException from '../../common/exception/notFound.exception';
+import UnauthorizedException from '../../common/exception/unauthorized.exception';
 import BaseService from '../../common/service/base.service';
 import Crypt from '../../common/utils/crypt';
 import FileSystem from '../../common/utils/fs';
@@ -36,7 +37,7 @@ class AuthService implements BaseService {
     public register = async (body: RegisterDTO) => {
         try {
             const user = await this.getUserByEmailAndUsername(body.email, body.username);
-            if (user) throw new BadRequestException('User already exist.');
+            if (user) throw new ConflictException('User already exist.');
 
             const hashedPassword = await Crypt.hash(body.password);
             await this.createUser(body, hashedPassword);
