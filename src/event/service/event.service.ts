@@ -338,7 +338,7 @@ class EventService implements BaseService {
         const eventData: Partial<EventDetails> = {
             eventID: event.eventID,
             eventName: event.eventName,
-            date: event.eventName,
+            date: event.date,
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
