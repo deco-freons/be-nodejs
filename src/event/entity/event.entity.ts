@@ -1,4 +1,14 @@
-import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    JoinColumn,
+    JoinTable,
+    ManyToMany,
+    ManyToOne,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn,
+} from 'typeorm';
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
 
@@ -46,8 +56,14 @@ class Event {
     @JoinColumn({ name: 'event_creator', referencedColumnName: 'userID' })
     eventCreator: User;
 
-    @ManyToMany(() => User, (user) => user.eventJoined )
-    participants: User[]
+    @ManyToMany(() => User, (user) => user.eventJoined)
+    participants: User[];
+
+    @CreateDateColumn({ name: 'created_at', select: false })
+    createdAt: Date;
+
+    @UpdateDateColumn({ name: 'updated_at', select: false })
+    updatedAt: Date;
 }
 
 export default Event;
