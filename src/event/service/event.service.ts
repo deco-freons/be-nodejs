@@ -6,7 +6,6 @@ import BadRequestException from '../../common/exception/badRequest.exception';
 import ConflictException from '../../common/exception/conflict.exception';
 import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
-import UnauthorizedException from '../../common/exception/unauthorized.exception';
 
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
@@ -119,7 +118,7 @@ class EventService implements BaseService {
             const event = await this.getEventByEventID(eventID);
             if (!event) throw new NotFoundException('Event does not exist.');
             if (event.eventCreator.username != username)
-                throw new UnauthorizedException(`You are unauthorized to update ${event.eventName} event.`);
+                throw new ForbiddenException(`You are unauthorized to update ${event.eventName} event.`);
 
             await this.updateEventDetails(body, eventID);
 
@@ -142,7 +141,7 @@ class EventService implements BaseService {
             const event = await this.getEventByEventID(eventID);
             if (!event) throw new NotFoundException('Event does not exist.');
             if (event.eventCreator.username != username)
-                throw new UnauthorizedException(`You are unauthorized to delete ${event.eventName} event.`);
+                throw new ForbiddenException(`You are unauthorized to delete ${event.eventName} event.`);
 
             await this.deleteEventByEventID(eventID);
 
