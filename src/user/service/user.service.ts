@@ -1,4 +1,5 @@
 import { Repository, ObjectLiteral, DataSource } from 'typeorm';
+import { getDistance } from 'geolib';
 
 import BaseService from '../../common/service/base.service';
 import BadRequestException from '../../common/exception/badRequest.exception';
@@ -6,13 +7,16 @@ import NotFoundException from '../../common/exception/notFound.exception';
 
 import User from '../../auth/entity/user.entity';
 import Event from '../../event/entity/event.entity';
+import EventDetails from '../../event/entity/event.details';
 
 import Preference from '../entity/preference.entity';
 import UserPreferenceDTO from '../dto/user.preference.dto';
 import UpdateUserDTO from '../dto/user.update.dto';
+import UserLongLatDTO from '../dto/user.longlat.dto';
 import { UpsertUserPreferenceResponseLocals } from '../response/userPreference.upsert.response';
 import { ReadUserResponseLocals } from '../response/user.read.response';
 import { UpdateUserResponseLocals } from '../response/user.update.response';
+import { UserEventsResponseLocals } from '../response/user.events.response';
 
 class UserService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
@@ -80,6 +84,24 @@ class UserService implements BaseService {
             const userData = this.constructUserData(user, preferences);
 
             return { message: 'Successfully update user details.', userData: userData };
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    public readEventsByUser = async (body: UserLongLatDTO, locals: UserEventsResponseLocals) => {
+        try {
+            const username = locals.username;
+            const email = locals.email;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const events = await this.getUserEvents(user.userID);
+            const eventsData = this.constructEventsByUser(events, longitude, latitude);
+
+            return { message: 'Successfully retrieve events by user.', events: eventsData };
         } catch (error) {
             throw error;
         }
@@ -175,6 +197,37 @@ class UserService implements BaseService {
             .where('username = :username', { username: username })
             .andWhere('email = :email', { email: email })
             .execute();
+    };
+
+    private constructEventsByUser = (events: Event[], longitude: number, latitude: number) => {
+        const eventsByUserWithinRadius = events
+            .map((event) => this.constructEventsData(event, longitude, latitude))
+            .sort((event1, event2) => this.sortEventsByDistance(event1, event2));
+        return eventsByUserWithinRadius;
+    };
+
+    private constructEventsData = (event: Event, longitude: number, latitude: number) => {
+        const distance = this.calculateDistanceBetweenUserAndEventLocation(event, longitude, latitude);
+        const eventData: Partial<EventDetails> = {
+            eventID: event.eventID,
+            eventName: event.eventName,
+            date: event.eventName,
+            distance: distance,
+            longitude: event.longitude,
+            latitude: event.latitude,
+        };
+        return eventData;
+    };
+
+    private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
+        const from = { longitude: longitude, latitude: latitude };
+        const to = { longitude: event.longitude, latitude: event.latitude };
+        const distance = parseFloat((getDistance(from, to) / 1000).toFixed(1));
+        return distance;
+    };
+
+    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
+        return event1.distance > event2.distance ? 1 : -1;
     };
 }
 

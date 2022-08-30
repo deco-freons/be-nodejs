@@ -12,9 +12,12 @@ import UpsertUserPreferenceRequest from '../request/userPreference.upsert.reques
 import ReadUserRequest from '../request/user.read.request';
 import UpdateUserDTO from '../dto/user.update.dto';
 import UpdateUserRequest from '../request/user.update.request';
+import UserLongLatDTO from '../dto/user.longlat.dto';
+import UserEventsRequest from '../request/user.events.request';
 import { UpsertUserPreferenceResponse } from '../response/userPreference.upsert.response';
 import { ReadUserResponse } from '../response/user.read.response';
 import { UpdateUserResponse } from '../response/user.update.response';
+import { UserEventsResponse } from '../response/user.events.response';
 
 class UserController implements BaseController {
     path: string;
@@ -39,6 +42,11 @@ class UserController implements BaseController {
             '/update',
             [authorizationMiddleware, validationMiddleware(UpdateUserDTO, RequestTypes.BODY)],
             this.updateUserHandler,
+        );
+        this.router.post(
+            '/events',
+            [authorizationMiddleware, validationMiddleware(UserLongLatDTO, RequestTypes.BODY)],
+            this.readEventsByUserHandler,
         );
     }
 
@@ -77,6 +85,21 @@ class UserController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.updateUser(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message, user: serviceResponse.userData });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readEventsByUserHandler = async (
+        request: UserEventsRequest,
+        response: UserEventsResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const locals = response.locals;
+            const serviceResponse = await this.service.readEventsByUser(body, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
         } catch (error) {
             next(error);
         }
