@@ -1,5 +1,5 @@
 import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/response/base.response';
-import User from '../entity/user.entity';
+import UserDTO from '../dto/user.dto';
 
 /**
  * @openapi
@@ -31,7 +31,7 @@ interface LoginResponse<ResBody = LoginResponseBody, Locals = LoginResponseLocal
     extends BaseResponse<ResBody, Locals> {}
 
 interface LoginResponseBody extends BaseResponseBody {
-    user: Partial<User>;
+    user: UserDTO;
     accessToken: string;
     refreshToken: string;
 }

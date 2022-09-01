@@ -1,4 +1,4 @@
-import { IsEmail, IsISO8601, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsISO8601, IsNumber, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Match } from '../../common/decorator/match';
 
 class RegisterDTO {
@@ -32,6 +32,12 @@ class RegisterDTO {
 
     @IsISO8601({ strict: true })
     birthDate: string;
+
+    @IsNumber()
+    location: number;
+
+    @IsBoolean()
+    isShareLocation: boolean;
 }
 
 export default RegisterDTO;
