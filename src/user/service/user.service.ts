@@ -118,6 +118,7 @@ class UserService implements BaseService {
                 'user.birthDate',
                 'user.isVerified',
                 'user.isFirstLogin',
+                'user.isShareLocation',
             ])
             .from(User, 'user')
             .where('user.email = :email', { email: email })

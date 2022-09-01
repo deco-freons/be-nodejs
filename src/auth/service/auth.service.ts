@@ -17,6 +17,7 @@ import { EMAIL } from '../../common/enum/email.enum';
 import { TTL } from '../../common/enum/token.enum';
 
 import User from '../entity/user.entity';
+import UserDTO from '../dto/user.dto';
 import RegisterDTO from '../dto/register.dto';
 import LoginDTO from '../dto/login.dto';
 import TokenDTO from '../dto/token.dto';
@@ -26,12 +27,15 @@ import { TokenResponseLocals } from '../response/token.response';
 import { ForgetPasswordDTO, ForgetPasswordCompleteDTO } from '../dto/forgetPassword.dto';
 
 import Preference from '../../user/entity/preference.entity';
+import Location from '../../location/entity/location.entity';
 
 class AuthService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
+    locationRepository: Repository<ObjectLiteral>;
 
     constructor(database: DataSource) {
         this.userRepository = database.getRepository(User);
+        this.locationRepository = database.getRepository(Location);
     }
 
     public register = async (body: RegisterDTO) => {
@@ -40,7 +44,8 @@ class AuthService implements BaseService {
             if (user) throw new ConflictException('User already exist.');
 
             const hashedPassword = await Crypt.hash(body.password);
-            await this.createUser(body, hashedPassword);
+            const location = await this.getLocation(body.location);
+            await this.createUser(body, hashedPassword, location);
 
             const newUser = await this.getUserByEmailAndUsername(body.email, body.username);
             const userID = String(newUser.userID);
@@ -70,8 +75,14 @@ class AuthService implements BaseService {
             const matched = await Crypt.compare(body.password, user.password);
             if (!matched) throw new BadRequestException('Username or password does not match.');
 
+            let locationData: Partial<Location>;
+            if (user.isShareLocation && user.location) {
+                const location = await this.getLocation(user.location.locationID);
+                locationData = this.constructLocationData(location);
+            }
+
             const preferences = await this.getUserPreferences(user);
-            const userData = this.constructUserData(user, preferences);
+            const userData = this.constructUserData(user, preferences, locationData);
 
             const userPayload = {
                 username: user.username,
@@ -241,8 +252,14 @@ class AuthService implements BaseService {
             const user = await this.getUserByEmailAndUsername(email, username);
             if (!user) throw new NotFoundException('User does not exist.');
 
+            let locationData: Partial<Location>;
+            if (user.isShareLocation && user.location) {
+                const location = await this.getLocation(user.location.locationID);
+                locationData = this.constructLocationData(location);
+            }
+
             const preferences = await this.getUserPreferences(user);
-            const userData = this.constructUserData(user, preferences);
+            const userData = this.constructUserData(user, preferences, locationData);
 
             return {
                 message: 'Success.',
@@ -279,8 +296,14 @@ class AuthService implements BaseService {
             const accessTokenNew = JWT.signAccessToken(userPayload);
             const refreshTokenNew = JWT.signRefreshToken(userPayload);
 
+            let locationData: Partial<Location>;
+            if (user.isShareLocation && user.location) {
+                const location = await this.getLocation(user.location.locationID);
+                locationData = this.constructLocationData(location);
+            }
+
             const preferences = await this.getUserPreferences(user);
-            const userData = this.constructUserData(user, preferences);
+            const userData = this.constructUserData(user, preferences, locationData);
 
             return {
                 message: 'Success.',
@@ -317,23 +340,32 @@ class AuthService implements BaseService {
         }
     };
 
-    private constructUserData = (user: User, preferences: Preference[]) => {
-        const userData: Partial<User> = {
+    private constructUserData = (user: User, preferences: Preference[], location?: Partial<Location>) => {
+        const userData: UserDTO = {
             userID: user.userID,
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
             birthDate: user.birthDate,
+            location: location,
             preferences: preferences,
             isVerified: user.isVerified,
             isFirstLogin: user.isFirstLogin,
+            isShareLocation: user.isShareLocation,
         };
         return userData;
     };
 
+    private constructLocationData = (location: Location) => {
+        const locationData: Partial<Location> = {
+            suburb: location.suburb,
+        };
+        return locationData;
+    };
+
     private getUserByEmailAndUsername = async (email: string, username: string) => {
-        const queryBuilder = this.userRepository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
         const user = await queryBuilder
             .select([
                 'user.userID',
@@ -342,18 +374,20 @@ class AuthService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
+                'location.locationID',
                 'user.isVerified',
                 'user.isFirstLogin',
+                'user.isShareLocation',
             ])
-            .from(User, 'user')
+            .leftJoin('user.location', 'location')
             .where('user.email = :email', { email: email })
             .orWhere('user.username = :username', { username: username })
             .getOne();
-        return user;
+        return user as User;
     };
 
     private getUserByID = async (userID: number) => {
-        const queryBuilder = this.userRepository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
         const user = await queryBuilder
             .select([
                 'user.userID',
@@ -362,17 +396,19 @@ class AuthService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
+                'location.locationID',
                 'user.isVerified',
                 'user.isFirstLogin',
+                'user.isShareLocation',
             ])
-            .from(User, 'user')
+            .leftJoin('user.location', 'location')
             .where('user.userID = :userID', { userID: userID })
             .getOne();
-        return user;
+        return user as User;
     };
 
     private getUserByEmail = async (email: string) => {
-        const queryBuilder = this.userRepository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
         const user = await queryBuilder
             .select([
                 'user.userID',
@@ -381,17 +417,19 @@ class AuthService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
+                'location.locationID',
                 'user.isVerified',
                 'user.isFirstLogin',
+                'user.isShareLocation',
             ])
-            .from(User, 'user')
+            .leftJoin('user.location', 'location')
             .where('user.email = :email', { email: email })
             .getOne();
-        return user;
+        return user as User;
     };
 
     private getUserByUsername = async (username: string) => {
-        const queryBuilder = this.userRepository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
         const user = await queryBuilder
             .select([
                 'user.userID',
@@ -401,13 +439,15 @@ class AuthService implements BaseService {
                 'user.email',
                 'user.password',
                 'user.birthDate',
+                'location.locationID',
                 'user.isVerified',
                 'user.isFirstLogin',
+                'user.isShareLocation',
             ])
-            .from(User, 'user')
+            .leftJoin('user.location', 'location')
             .where('user.username = :username', { username: username })
             .getOne();
-        return user;
+        return user as User;
     };
 
     private getUserPreferences = async (user: User) => {
@@ -416,13 +456,24 @@ class AuthService implements BaseService {
         return preferences;
     };
 
-    private createUser = async (body: RegisterDTO, hashedPassword: string) => {
+    private getLocation = async (locationID: number) => {
+        const queryBuilder = this.locationRepository.createQueryBuilder();
+        const location = await queryBuilder
+            .select(['location.locationID', 'location.suburb', 'location.city', 'location.state', 'location.country'])
+            .from(Location, 'location')
+            .where('location.locationID = :locationID', { locationID: locationID })
+            .getOne();
+        return location;
+    };
+
+    private createUser = async (body: RegisterDTO, hashedPassword: string, location: Location) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         await queryBuilder
             .insert()
             .into(User)
             .values({
                 ...body,
+                location: location,
                 password: hashedPassword,
             })
             .execute();

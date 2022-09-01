@@ -2,14 +2,17 @@ import {
     Column,
     CreateDateColumn,
     Entity,
+    JoinColumn,
     JoinTable,
     ManyToMany,
+    ManyToOne,
     OneToMany,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 import Preference from '../../user/entity/preference.entity';
 import Event from '../../event/entity/event.entity';
+import Location from '../../location/entity/location.entity';
 
 /**
  * @openapi
@@ -66,11 +69,18 @@ class User {
     @Column({ name: 'birth_date', type: 'date' })
     birthDate: string;
 
+    @ManyToOne(() => Location, (location) => location.locationID)
+    @JoinColumn({ name: 'location' })
+    location: Location;
+
     @Column({ name: 'is_verified', default: false })
     isVerified: boolean;
 
     @Column({ name: 'is_first_login', default: true })
     isFirstLogin: boolean;
+
+    @Column({ name: 'is_share_location', default: false })
+    isShareLocation: boolean;
 
     @ManyToMany(() => Preference)
     @JoinTable({
