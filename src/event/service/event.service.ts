@@ -138,7 +138,9 @@ class EventService implements BaseService {
             if (event.eventCreator.username != username)
                 throw new ForbiddenException(`You are unauthorized to update ${event.eventName} event.`);
 
-            await this.updateEventDetails(body, eventID);
+            const locationID = body.location;
+            const location = await this.getLocation(locationID);
+            await this.updateEventDetails(body, eventID, location);
 
             const categoryIDs = body.categories;
             const categories = await this.getCategoriesByID(categoryIDs);
@@ -339,7 +341,7 @@ class EventService implements BaseService {
         return user as User;
     };
 
-    private updateEventDetails = async (body: UpdateEventDTO, eventID: number) => {
+    private updateEventDetails = async (body: UpdateEventDTO, eventID: number, location: Location) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder
             .update(Event)
@@ -350,6 +352,9 @@ class EventService implements BaseService {
                 endTime: body.endTime,
                 longitude: body.longitude,
                 latitude: body.latitude,
+                location: location,
+                locationName: body.locationName,
+                shortDescription: body.shortDescription,
                 description: body.description,
             })
             .where('eventID = :eventID', { eventID: eventID })
@@ -384,6 +389,7 @@ class EventService implements BaseService {
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
+            locationName: event.locationName,
             eventCreator: event.eventCreator,
         };
         return eventData;
