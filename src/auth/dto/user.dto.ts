@@ -1,4 +1,5 @@
-import Location from "../../location/entity/location.entity";
+import EventDetails from '../../event/entity/event.details';
+import Location from '../../location/entity/location.entity';
 import Preference from '../../user/entity/preference.entity';
 
 class UserDTO {
@@ -10,6 +11,7 @@ class UserDTO {
     birthDate: string;
     location: Partial<Location>;
     preferences: Preference[];
+    eventCreated: Partial<EventDetails>[];
     isVerified: boolean;
     isFirstLogin: boolean;
     isShareLocation: boolean;

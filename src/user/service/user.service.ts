@@ -8,6 +8,7 @@ import NotFoundException from '../../common/exception/notFound.exception';
 import User from '../../auth/entity/user.entity';
 import Event from '../../event/entity/event.entity';
 import EventDetails from '../../event/entity/event.details';
+import Location from '../../location/entity/location.entity';
 
 import Preference from '../entity/preference.entity';
 import UserPreferenceDTO from '../dto/user.preference.dto';
@@ -17,16 +18,20 @@ import { UpsertUserPreferenceResponseLocals } from '../response/userPreference.u
 import { ReadUserResponseLocals } from '../response/user.read.response';
 import { UpdateUserResponseLocals } from '../response/user.update.response';
 import { UserEventsResponseLocals } from '../response/user.events.response';
+import UserDTO from '../../auth/dto/user.dto';
+import UserOtherDTO from '../dto/user.others.dto';
 
 class UserService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
     preferenceRepository: Repository<ObjectLiteral>;
     eventRepository: Repository<ObjectLiteral>;
+    locationRepository: Repository<ObjectLiteral>;
 
     constructor(database: DataSource) {
         this.userRepository = database.getRepository(User);
         this.preferenceRepository = database.getRepository(Preference);
         this.eventRepository = database.getRepository(Event);
+        this.locationRepository = database.getRepository(Location);
     }
 
     public upsertUserPreference = async (body: UserPreferenceDTO, locals: UpsertUserPreferenceResponseLocals) => {
@@ -56,12 +61,44 @@ class UserService implements BaseService {
             if (!user) throw new NotFoundException('User does not exist.');
 
             const preferences = await this.getUserPreferences(user);
-            const events = await this.getUserEvents(user.userID);
-            const userData = this.constructUserDataWithEvents(user, preferences, events);
+
+            let locationData: Partial<Location>;
+            if (user.isShareLocation && user.location) {
+                const location = await this.getLocation(user.location.locationID);
+                locationData = this.constructLocationData(location);
+            }
+
+            const userData = this.constructUserData(user, preferences, locationData);
 
             return { message: 'Successfully retrieved user details.', userData: userData };
         } catch (error) {
-            console.log(error);
+            throw error;
+        }
+    };
+
+    public readOtherUser = async (body: UserOtherDTO) => {
+        try {
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const userID = body.userID;
+            const user = await this.getUserByUserID(userID);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const preferences = await this.getUserPreferences(user);
+
+            let locationData: Partial<Location>;
+            if (user.isShareLocation && user.location) {
+                const location = await this.getLocation(user.location.locationID);
+                locationData = this.constructLocationData(location);
+            }
+
+            const events = await this.getUserEvents(user.userID);
+            const eventsData = this.constructEventsByUser(events, longitude, latitude);
+
+            const userData = this.constructUserDataWithEvents(user, preferences, eventsData, locationData);
+
+            return { message: 'Successfully retrieved user details.', userData: userData };
+        } catch (error) {
             throw error;
         }
     };
@@ -70,7 +107,8 @@ class UserService implements BaseService {
         try {
             const email = locals.email;
             const username = locals.username;
-            await this.updateUserDetails(body, email, username);
+            const location = await this.getLocation(body.location);
+            await this.updateUserDetails(body, email, username, location);
 
             const user = await this.getUserByEmailAndUsername(email, username);
             if (!user) throw new NotFoundException('User does not exist.');
@@ -81,7 +119,13 @@ class UserService implements BaseService {
 
             await this.updateUserPreferences(user, preferences);
 
-            const userData = this.constructUserData(user, preferences);
+            let locationData: Partial<Location>;
+            if (user.isShareLocation && user.location) {
+                const location = await this.getLocation(user.location.locationID);
+                locationData = this.constructLocationData(location);
+            }
+
+            const userData = this.constructUserData(user, preferences, locationData);
 
             return { message: 'Successfully update user details.', userData: userData };
         } catch (error) {
@@ -107,29 +151,25 @@ class UserService implements BaseService {
         }
     };
 
-    private constructUserData = (user: User, preferences: Preference[]) => {
-        const userData: Partial<User> = {
+    private constructUserData = (user: User, preferences: Preference[], location: Partial<Location>) => {
+        const userData: Partial<UserDTO> = {
             userID: user.userID,
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
             birthDate: user.birthDate,
+            location: location,
             preferences: preferences,
             isVerified: user.isVerified,
             isFirstLogin: user.isFirstLogin,
+            isShareLocation: user.isShareLocation,
         };
         return userData;
     };
 
-    private constructUserDataWithEvents = (user: User, preferences: Preference[], events: Event[]) => {
-        const userData = this.constructUserData(user, preferences);
-        userData.eventCreated = events;
-        return userData;
-    };
-
     private getUserByEmailAndUsername = async (email: string, username: string) => {
-        const queryBuilder = this.userRepository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
         const user = await queryBuilder
             .select([
                 'user.userID',
@@ -138,15 +178,33 @@ class UserService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
+                'location.locationID',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',
             ])
-            .from(User, 'user')
+            .leftJoin('user.location', 'location')
             .where('user.email = :email', { email: email })
             .andWhere('user.username = :username', { username: username })
             .getOne();
-        return user;
+        return user as User;
+    };
+
+    private getUserByUserID = async (userID: number) => {
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
+        const user = await queryBuilder
+            .select([
+                'user.userID',
+                'user.username',
+                'user.firstName',
+                'user.lastName',
+                'location.locationID',
+                'user.isShareLocation',
+            ])
+            .leftJoin('user.location', 'location')
+            .where('user.userID = :userID', { userID: userID })
+            .getOne();
+        return user as User;
     };
 
     private getUserEvents = async (userID: number) => {
@@ -184,17 +242,33 @@ class UserService implements BaseService {
         return preferences;
     };
 
+    private getLocation = async (locationID: number) => {
+        const queryBuilder = this.locationRepository.createQueryBuilder();
+        const location = await queryBuilder
+            .select(['location.locationID', 'location.suburb', 'location.city', 'location.state', 'location.country'])
+            .from(Location, 'location')
+            .where('location.locationID = :locationID', { locationID: locationID })
+            .getOne();
+        return location;
+    };
+
     private updateUserPreferences = async (user: User, preferences: Preference[]) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         const oldPreferences = await this.getUserPreferences(user);
         await queryBuilder.relation(User, 'preferences').of(user).addAndRemove(preferences, oldPreferences);
     };
 
-    private updateUserDetails = async (body: UpdateUserDTO, email: string, username: string) => {
+    private updateUserDetails = async (body: UpdateUserDTO, email: string, username: string, location: Location) => {
         const queryBuilder = this.userRepository.createQueryBuilder();
         await queryBuilder
             .update(User)
-            .set({ firstName: body.firstName, lastName: body.lastName, birthDate: body.birthDate })
+            .set({
+                firstName: body.firstName,
+                lastName: body.lastName,
+                birthDate: body.birthDate,
+                isShareLocation: body.isShareLocation,
+                location: location,
+            })
             .where('username = :username', { username: username })
             .andWhere('email = :email', { email: email })
             .execute();
@@ -212,12 +286,30 @@ class UserService implements BaseService {
         const eventData: Partial<EventDetails> = {
             eventID: event.eventID,
             eventName: event.eventName,
-            date: event.eventName,
+            date: event.date,
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
         };
         return eventData;
+    };
+
+    private constructLocationData = (location: Location) => {
+        const locationData: Partial<Location> = {
+            suburb: location.suburb,
+        };
+        return locationData;
+    };
+
+    private constructUserDataWithEvents = (
+        user: User,
+        preferences: Preference[],
+        events: Partial<EventDetails>[],
+        location: Partial<Location>,
+    ) => {
+        const userData = this.constructUserData(user, preferences, location);
+        userData.eventCreated = events;
+        return userData;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {

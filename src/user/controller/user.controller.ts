@@ -10,6 +10,7 @@ import UserService from '../service/user.service';
 import UserPreferenceDTO from '../dto/user.preference.dto';
 import UpsertUserPreferenceRequest from '../request/userPreference.upsert.request';
 import ReadUserRequest from '../request/user.read.request';
+import UserOtherDTO from '../dto/user.others.dto';
 import UpdateUserDTO from '../dto/user.update.dto';
 import UpdateUserRequest from '../request/user.update.request';
 import UserLongLatDTO from '../dto/user.longlat.dto';
@@ -18,6 +19,8 @@ import { UpsertUserPreferenceResponse } from '../response/userPreference.upsert.
 import { ReadUserResponse } from '../response/user.read.response';
 import { UpdateUserResponse } from '../response/user.update.response';
 import { UserEventsResponse } from '../response/user.events.response';
+import ReadOtherUserRequest from '../request/user.others.request';
+import { ReadOtherUserResponse } from '../response/user.others.response';
 
 class UserController implements BaseController {
     path: string;
@@ -38,6 +41,11 @@ class UserController implements BaseController {
             this.upsertUserPreferenceHandler,
         );
         this.router.get('/read', authorizationMiddleware, this.readUserHandler);
+        this.router.post(
+            '/read/other',
+            [authorizationMiddleware, validationMiddleware(UserOtherDTO, RequestTypes.BODY)],
+            this.readOtherUserHandler,
+        );
         this.router.post(
             '/update',
             [authorizationMiddleware, validationMiddleware(UpdateUserDTO, RequestTypes.BODY)],
@@ -69,6 +77,20 @@ class UserController implements BaseController {
         try {
             const locals = response.locals;
             const serviceResponse = await this.service.readUser(locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message, user: serviceResponse.userData });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readOtherUserHandler = async (
+        request: ReadOtherUserRequest,
+        response: ReadOtherUserResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const serviceResponse = await this.service.readOtherUser(body);
             return response.send({ statusCode: 200, message: serviceResponse.message, user: serviceResponse.userData });
         } catch (error) {
             next(error);
