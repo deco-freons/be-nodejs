@@ -341,7 +341,7 @@ class AuthService implements BaseService {
     };
 
     private constructUserData = (user: User, preferences: Preference[], location?: Partial<Location>) => {
-        const userData: UserDTO = {
+        const userData: Partial<UserDTO> = {
             userID: user.userID,
             username: user.username,
             firstName: user.firstName,

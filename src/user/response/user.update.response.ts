@@ -7,7 +7,7 @@ interface UpdateUserResponse<
 > extends BaseResponse<ResBody, Locals> {}
 
 interface UpdateUserResponseBody extends BaseResponseBody {
-    user: UserDTO;
+    user: Partial<UserDTO>;
 }
 
 interface UpdateUserResponseLocals extends BaseLocals {

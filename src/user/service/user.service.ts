@@ -19,6 +19,7 @@ import { ReadUserResponseLocals } from '../response/user.read.response';
 import { UpdateUserResponseLocals } from '../response/user.update.response';
 import { UserEventsResponseLocals } from '../response/user.events.response';
 import UserDTO from '../../auth/dto/user.dto';
+import UserOtherDTO from '../dto/user.others.dto';
 
 class UserService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
@@ -71,7 +72,33 @@ class UserService implements BaseService {
 
             return { message: 'Successfully retrieved user details.', userData: userData };
         } catch (error) {
-            console.log(error);
+            throw error;
+        }
+    };
+
+    public readOtherUser = async (body: UserOtherDTO) => {
+        try {
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const userID = body.userID;
+            const user = await this.getUserByUserID(userID);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const preferences = await this.getUserPreferences(user);
+
+            let locationData: Partial<Location>;
+            if (user.isShareLocation && user.location) {
+                const location = await this.getLocation(user.location.locationID);
+                locationData = this.constructLocationData(location);
+            }
+
+            const events = await this.getUserEvents(user.userID);
+            const eventsData = this.constructEventsByUser(events, longitude, latitude);
+
+            const userData = this.constructUserDataWithEvents(user, preferences, eventsData, locationData);
+
+            return { message: 'Successfully retrieved user details.', userData: userData };
+        } catch (error) {
             throw error;
         }
     };
@@ -125,7 +152,7 @@ class UserService implements BaseService {
     };
 
     private constructUserData = (user: User, preferences: Preference[], location: Partial<Location>) => {
-        const userData: UserDTO = {
+        const userData: Partial<UserDTO> = {
             userID: user.userID,
             username: user.username,
             firstName: user.firstName,
@@ -159,6 +186,23 @@ class UserService implements BaseService {
             .leftJoin('user.location', 'location')
             .where('user.email = :email', { email: email })
             .andWhere('user.username = :username', { username: username })
+            .getOne();
+        return user as User;
+    };
+
+    private getUserByUserID = async (userID: number) => {
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
+        const user = await queryBuilder
+            .select([
+                'user.userID',
+                'user.username',
+                'user.firstName',
+                'user.lastName',
+                'location.locationID',
+                'user.isShareLocation',
+            ])
+            .leftJoin('user.location', 'location')
+            .where('user.userID = :userID', { userID: userID })
             .getOne();
         return user as User;
     };
@@ -242,7 +286,7 @@ class UserService implements BaseService {
         const eventData: Partial<EventDetails> = {
             eventID: event.eventID,
             eventName: event.eventName,
-            date: event.eventName,
+            date: event.date,
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
@@ -255,6 +299,17 @@ class UserService implements BaseService {
             suburb: location.suburb,
         };
         return locationData;
+    };
+
+    private constructUserDataWithEvents = (
+        user: User,
+        preferences: Preference[],
+        events: Partial<EventDetails>[],
+        location: Partial<Location>,
+    ) => {
+        const userData = this.constructUserData(user, preferences, location);
+        userData.eventCreated = events;
+        return userData;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
