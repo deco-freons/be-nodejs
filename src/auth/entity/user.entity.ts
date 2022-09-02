@@ -14,38 +14,6 @@ import Preference from '../../user/entity/preference.entity';
 import Event from '../../event/entity/event.entity';
 import Location from '../../location/entity/location.entity';
 
-/**
- * @openapi
- * components:
- *  schemas:
- *    User:
- *      type: object
- *      required:
- *        - userID
- *        - username
- *        - firstName
- *        - lastName
- *        - email
- *        - password
- *        - confirmPassword
- *        - birthDate
- *      properties:
- *        username:
- *          type: string
- *        firstName:
- *          type: string
- *        lastName:
- *          type: string
- *        email:
- *          type: string
- *        password:
- *          type: string
- *        confirmPassword:
- *          type: string
- *        birthDate:
- *          type: date string
- *          example: '1990-01-01'
- */
 @Entity()
 class User {
     @PrimaryGeneratedColumn({ name: 'user_id' })

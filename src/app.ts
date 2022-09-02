@@ -1,13 +1,11 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import swaggerUI from 'swagger-ui-express';
 import { DataSource } from 'typeorm';
 
 import Log from './common/logger/logger';
 import PostgreSQLDatabase from './common/config/postgres';
 import Redis from './common/config/redis';
-import SwaggerJsDoc from './common/config/swagger';
 import errorMiddleware from './common/middleware/error.middleware';
 import pinoLogger from './common/logger/pino.logger';
 
@@ -40,7 +38,6 @@ class App {
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(Log);
-        this.app.use('/docs', swaggerUI.serve, swaggerUI.setup(SwaggerJsDoc));
     }
 
     private initAddress() {

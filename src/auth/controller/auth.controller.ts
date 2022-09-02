@@ -59,39 +59,6 @@ class AuthController implements BaseController {
         this.router.delete('/logout', validationMiddleware(TokenDTO, RequestTypes.BODY), this.logoutHandler);
     }
 
-    /**
-     * @openapi
-     * '/register':
-     *  post:
-     *     tags:
-     *     - /auth
-     *     summary: Register a User
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/RegisterRequest'
-     *     responses:
-     *      201:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/RegisterResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
-     */
     private registerHandler = async (request: RegisterRequest, response: RegisterResponse, next: NextFunction) => {
         try {
             const body = request.body;
@@ -102,45 +69,6 @@ class AuthController implements BaseController {
         }
     };
 
-    /**
-     * @openapi
-     * '/login':
-     *  post:
-     *     tags:
-     *     - /auth
-     *     summary: Login User
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/LoginRequest'
-     *     responses:
-     *      200:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/LoginResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      401:
-     *        description: Unauthorized
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/UnauthorizedResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
-     */
     private loginHandler = async (request: LoginRequest, response: LoginResponse, next: NextFunction) => {
         try {
             const body = request.body;
@@ -157,45 +85,6 @@ class AuthController implements BaseController {
         }
     };
 
-    /**
-     * @openapi
-     * '/verify':
-     *  post:
-     *     tags:
-     *     - /auth
-     *     summary: User Account Verification
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/VerifyRequest'
-     *     responses:
-     *      200:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/VerifyResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      401:
-     *        description: Unauthorized or Token Expired
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/UnauthorizedResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
-     */
     private verifyHandler = async (request: VerifyRequest, response: VerifyResponse, next: NextFunction) => {
         try {
             const body = request.body;
@@ -206,45 +95,6 @@ class AuthController implements BaseController {
         }
     };
 
-    /**
-     * @openapi
-     * '/verify/request':
-     *  post:
-     *     tags:
-     *     - /auth
-     *     summary: Request New Verification Link
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/VerifyRequest'
-     *     responses:
-     *      200:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/VerifyResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      401:
-     *        description: Unauthorized
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/UnauthorizedResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
-     */
     private requestVerifyHandler = async (request: VerifyRequest, response: VerifyResponse, next: NextFunction) => {
         try {
             const body = request.body;
@@ -255,51 +105,6 @@ class AuthController implements BaseController {
         }
     };
 
-    /**
-     * @openapi
-     * '/forget-password':
-     *  patch:
-     *     tags:
-     *     - /auth
-     *     summary: Forget Password
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/ForgetPasswordRequest'
-     *     responses:
-     *      200:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/ForgetPasswordResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      401:
-     *        description: Unauthorized or Token Expired
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/UnauthorizedResponse'
-     *      404:
-     *        description: Not Found
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/NotFoundResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
-     */
     private forgetPassword = async (
         request: ForgetPasswordRequest,
         response: ForgetPasswordResponse,
@@ -314,45 +119,6 @@ class AuthController implements BaseController {
         }
     };
 
-    /**
-     * @openapi
-     * '/forget-password/request':
-     *  post:
-     *     tags:
-     *     - /auth
-     *     summary: Request Forget Password Link
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/ForgetPasswordRequestRequest'
-     *     responses:
-     *      200:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/ForgetPasswordRequestResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      401:
-     *        description: Unauthorized
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/UnauthorizedResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
-     */
     private requestForgetPassword = async (
         request: ForgetPasswordRequestRequest,
         response: ForgetPasswordRequestResponse,
@@ -382,45 +148,6 @@ class AuthController implements BaseController {
         }
     };
 
-    /**
-     * @openapi
-     * '/refresh-token':
-     *  post:
-     *     tags:
-     *     - /auth
-     *     summary: Request New Access and Refresh Token
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/RefreshTokenRequest'
-     *     responses:
-     *      200:
-     *        description: Success
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/RefreshTokenResponse'
-     *      400:
-     *        description: Bad Request
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/BadRequestResponse'
-     *      401:
-     *        description: Unauthorized
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/UnauthorizedResponse'
-     *      500:
-     *        description: Internal Server Error
-     *        content:
-     *          application/json:
-     *            schema:
-     *              $ref: '#/components/schemas/InternalServerErrorResponse'
-     */
     private refreshTokenHandler = async (request: TokenRequest, response: TokenResponse, next: NextFunction) => {
         try {
             const body = request.body;
@@ -438,23 +165,6 @@ class AuthController implements BaseController {
         }
     };
 
-    /**
-     * @openapi
-     * '/logout':
-     *  delete:
-     *     tags:
-     *     - /auth
-     *     summary: Logout User
-     *     requestBody:
-     *      required: true
-     *      content:
-     *        application/json:
-     *           schema:
-     *              $ref: '#/components/schemas/RefreshTokenRequest'
-     *     responses:
-     *      204:
-     *        description: No Content
-     */
     private logoutHandler = async (request: TokenRequest, response: TokenResponse, next: NextFunction) => {
         try {
             const body = request.body;
