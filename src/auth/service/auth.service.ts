@@ -77,8 +77,7 @@ class AuthService implements BaseService {
 
             let locationData: Partial<Location>;
             if (user.isShareLocation && user.location) {
-                const location = await this.getLocation(user.location.locationID);
-                locationData = this.constructLocationData(location);
+                locationData = this.constructLocationData(user.location);
             }
 
             const preferences = await this.getUserPreferences(user);
@@ -254,8 +253,7 @@ class AuthService implements BaseService {
 
             let locationData: Partial<Location>;
             if (user.isShareLocation && user.location) {
-                const location = await this.getLocation(user.location.locationID);
-                locationData = this.constructLocationData(location);
+                locationData = this.constructLocationData(user.location);
             }
 
             const preferences = await this.getUserPreferences(user);
@@ -298,8 +296,7 @@ class AuthService implements BaseService {
 
             let locationData: Partial<Location>;
             if (user.isShareLocation && user.location) {
-                const location = await this.getLocation(user.location.locationID);
-                locationData = this.constructLocationData(location);
+                locationData = this.constructLocationData(user.location);
             }
 
             const preferences = await this.getUserPreferences(user);
@@ -374,7 +371,7 @@ class AuthService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
-                'location.locationID',
+                'location.suburb',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',
@@ -396,7 +393,7 @@ class AuthService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
-                'location.locationID',
+                'location.suburb',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',
@@ -417,7 +414,7 @@ class AuthService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
-                'location.locationID',
+                'location.suburb',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',
@@ -439,7 +436,7 @@ class AuthService implements BaseService {
                 'user.email',
                 'user.password',
                 'user.birthDate',
-                'location.locationID',
+                'location.suburb',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',

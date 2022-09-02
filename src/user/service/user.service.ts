@@ -8,17 +8,17 @@ import User from '../../auth/entity/user.entity';
 import Event from '../../event/entity/event.entity';
 import EventDetails from '../../event/entity/event.details';
 import Location from '../../location/entity/location.entity';
+import UserDTO from '../../auth/dto/user.dto';
 
 import Preference from '../entity/preference.entity';
 import UserPreferenceDTO from '../dto/user.preference.dto';
 import UpdateUserDTO from '../dto/user.update.dto';
 import UserLongLatDTO from '../dto/user.longlat.dto';
+import UserOtherDTO from '../dto/user.others.dto';
 import { UpsertUserPreferenceResponseLocals } from '../response/userPreference.upsert.response';
 import { ReadUserResponseLocals } from '../response/user.read.response';
 import { UpdateUserResponseLocals } from '../response/user.update.response';
 import { UserEventsResponseLocals } from '../response/user.events.response';
-import UserDTO from '../../auth/dto/user.dto';
-import UserOtherDTO from '../dto/user.others.dto';
 
 class UserService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
@@ -63,8 +63,7 @@ class UserService implements BaseService {
 
             let locationData: Partial<Location>;
             if (user.isShareLocation && user.location) {
-                const location = await this.getLocation(user.location.locationID);
-                locationData = this.constructLocationData(location);
+                locationData = this.constructLocationData(user.location);
             }
 
             const userData = this.constructUserData(user, preferences, locationData);
@@ -87,8 +86,7 @@ class UserService implements BaseService {
 
             let locationData: Partial<Location>;
             if (user.isShareLocation && user.location) {
-                const location = await this.getLocation(user.location.locationID);
-                locationData = this.constructLocationData(location);
+                locationData = this.constructLocationData(user.location);
             }
 
             const events = await this.getUserEvents(user.userID);
@@ -120,8 +118,7 @@ class UserService implements BaseService {
 
             let locationData: Partial<Location>;
             if (user.isShareLocation && user.location) {
-                const location = await this.getLocation(user.location.locationID);
-                locationData = this.constructLocationData(location);
+                locationData = this.constructLocationData(user.location);
             }
 
             const userData = this.constructUserData(user, preferences, locationData);
@@ -177,7 +174,7 @@ class UserService implements BaseService {
                 'user.lastName',
                 'user.email',
                 'user.birthDate',
-                'location.locationID',
+                'location.suburb',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',
@@ -197,7 +194,7 @@ class UserService implements BaseService {
                 'user.username',
                 'user.firstName',
                 'user.lastName',
-                'location.locationID',
+                'location.suburb',
                 'user.isShareLocation',
             ])
             .leftJoin('user.location', 'location')
