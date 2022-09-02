@@ -82,15 +82,17 @@ class EventService implements BaseService {
             const begin = parseInt(query.skip) * parseInt(query.take);
             const end = begin + parseInt(query.take);
 
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+
             let categories = body.categories;
             if (!categories) categories = await this.getAllCategoriesID();
             const events = await this.getEventsByCategories(categories);
-            const sortedAndFilteredEventsWithinRadius = this.getEventsWithinRadius(
-                events,
-                body.longitude,
-                body.latitude,
-                body.radius,
-            ).slice(begin, end);
+            const eventsData = await this.constructEventsData(events, longitude, latitude);
+            const sortedAndFilteredEventsWithinRadius = this.getEventsWithinRadius(eventsData, body.radius).slice(
+                begin,
+                end,
+            );
 
             return { message: 'Successfully retrieve events.', events: sortedAndFilteredEventsWithinRadius };
         } catch (error) {
@@ -254,6 +256,7 @@ class EventService implements BaseService {
                 'event.date',
                 'event.longitude',
                 'event.latitude',
+                'event.locationName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
@@ -275,6 +278,14 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
         return participants as User[];
+    };
+
+    private getEventParticipantsMap = async (events: Event[]) => {
+        const participantsMap = events.map(async (event) => {
+            const participants = await this.getEventParticipants(event);
+            return participants.length;
+        });
+        return Promise.all(participantsMap);
     };
 
     private getAllCategoriesID = async () => {
@@ -372,16 +383,21 @@ class EventService implements BaseService {
         await queryBuilder.delete().from(Event).where('eventID = :eventID', { eventID: eventID }).execute();
     };
 
-    private getEventsWithinRadius = (events: Event[], longitude: number, latitude: number, radius: number) => {
+    private getEventsWithinRadius = (events: Partial<EventDetails>[], radius: number) => {
         const eventsWithinRadius = events
-            .map((event) => this.constructEventsData(event, longitude, latitude))
             .filter((event) => this.filterEventsWithinRadius(event, radius))
-            .sort((event1, event2) => this.sortEventsByDistance(event1, event2));
+            .sort((event1, event2) => this.sortEventsPopularity(event1, event2));
         return eventsWithinRadius;
     };
 
-    private constructEventsData = (event: Event, longitude: number, latitude: number) => {
+    private constructEventsData = async (events: Event[], longitude: number, latitude: number) => {
+        const eventsData = events.map(async (event) => await this.constructEventData(event, longitude, latitude));
+        return Promise.all(eventsData);
+    };
+
+    private constructEventData = async (event: Event, longitude: number, latitude: number) => {
         const distance = this.calculateDistanceBetweenUserAndEventLocation(event, longitude, latitude);
+        const participants = await this.getEventParticipants(event);
         const eventData: Partial<EventDetails> = {
             eventID: event.eventID,
             eventName: event.eventName,
@@ -391,6 +407,7 @@ class EventService implements BaseService {
             latitude: event.latitude,
             locationName: event.locationName,
             eventCreator: event.eventCreator,
+            participants: participants.length,
         };
         return eventData;
     };
@@ -406,8 +423,8 @@ class EventService implements BaseService {
         return event.distance <= radius;
     };
 
-    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
-        return event1.distance > event2.distance ? 1 : -1;
+    private sortEventsPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
+        return event1.participants < event2.participants ? 1 : -1;
     };
 
     private constructEventDetailsData = async (
