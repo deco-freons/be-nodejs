@@ -2,13 +2,14 @@ import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 import { getDistance } from 'geolib';
 
 import BaseService from '../../common/service/base.service';
-import BadRequestException from '../../common/exception/badRequest.exception';
 import ConflictException from '../../common/exception/conflict.exception';
 import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
 
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
+import Location from '../../location/entity/location.entity';
+import UserDTO from '../../auth/dto/user.dto';
 
 import Event from '../entity/event.entity';
 import EventDetails from '../entity/event.details';
@@ -28,11 +29,13 @@ class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
     userRepository: Repository<ObjectLiteral>;
     categoryRepository: Repository<ObjectLiteral>;
+    locationRepository: Repository<ObjectLiteral>;
 
     constructor(database: DataSource) {
         this.eventRepository = database.getRepository(Event);
         this.userRepository = database.getRepository(User);
         this.categoryRepository = database.getRepository(Preference);
+        this.locationRepository = database.getRepository(Location);
     }
 
     public createEvent = async (body: CreateEventDTO, locals: CreateEventResponseLocals) => {
@@ -44,7 +47,11 @@ class EventService implements BaseService {
 
             const categoryIDs = body.categories;
             const categories = await this.getCategoriesByID(categoryIDs);
-            if (!categories) throw new BadRequestException('Categeory Invalid.');
+            if (!categories) throw new NotFoundException('Categeory Invalid.');
+
+            const locationID = body.location;
+            const location = await this.getLocation(locationID);
+            if (!location) throw new NotFoundException('Location unknown.');
 
             const eventData: Partial<Event> = {
                 eventName: body.eventName,
@@ -54,6 +61,9 @@ class EventService implements BaseService {
                 endTime: body.endTime,
                 longitude: body.longitude,
                 latitude: body.latitude,
+                location: location,
+                locationName: body.locationName,
+                shortDescription: body.shortDescription,
                 description: body.description,
                 eventCreator: user,
             };
@@ -94,9 +104,17 @@ class EventService implements BaseService {
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
 
+            let locationData: Partial<Location>;
+            if (event.location) locationData = this.constructEventLocationData(event.location);
             const participants = await this.getEventParticipants(event);
+            const participantsList = await this.constructParticipantsData(participants);
             const participated = this.getParticipated(participants, username);
-            const eventDetails = this.constructEventDetailsData(event, participants, participated);
+            const eventDetails = await this.constructEventDetailsData(
+                event,
+                participantsList,
+                participated,
+                locationData,
+            );
 
             const isEventCreator = locals.username == event.eventCreator.username ? true : false;
 
@@ -124,7 +142,7 @@ class EventService implements BaseService {
 
             const categoryIDs = body.categories;
             const categories = await this.getCategoriesByID(categoryIDs);
-            if (!categories) throw new BadRequestException('Categories Invalid.');
+            if (!categories) throw new NotFoundException('Categories Invalid.');
 
             await this.updateEventCategories(event, categories);
 
@@ -217,6 +235,8 @@ class EventService implements BaseService {
         const event = await queryBuilder
             .innerJoinAndSelect('event.categories', 'categories')
             .innerJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.location', 'location')
+            .addSelect(['location.locationID', 'location.suburb', 'location.city', 'location.state'])
             .addSelect(['event_creator.firstName', 'event_creator.lastName', 'event_creator.username'])
             .where('event.eventID = :eventID', { eventID: eventID })
             .getOne();
@@ -252,7 +272,7 @@ class EventService implements BaseService {
     private getEventParticipants = async (event: Event) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
-        return participants;
+        return participants as User[];
     };
 
     private getAllCategoriesID = async () => {
@@ -276,7 +296,7 @@ class EventService implements BaseService {
     };
 
     private getUserByEmailAndUsername = async (email: string, username: string) => {
-        const queryBuilder = this.userRepository.createQueryBuilder();
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
         const user = await queryBuilder
             .select([
                 'user.userID',
@@ -284,16 +304,39 @@ class EventService implements BaseService {
                 'user.firstName',
                 'user.lastName',
                 'user.email',
-                'user.password',
                 'user.birthDate',
+                'location.suburb',
                 'user.isVerified',
                 'user.isFirstLogin',
+                'user.isShareLocation',
             ])
-            .from(User, 'user')
+            .leftJoin('user.location', 'location')
             .where('user.email = :email', { email: email })
             .andWhere('user.username = :username', { username: username })
             .getOne();
-        return user;
+
+        return user as User;
+    };
+
+    private getLocation = async (locationID: number) => {
+        const queryBuilder = this.locationRepository.createQueryBuilder();
+        const location = await queryBuilder
+            .select(['location.locationID', 'location.suburb', 'location.city', 'location.state', 'location.country'])
+            .from(Location, 'location')
+            .where('location.locationID = :locationID', { locationID: locationID })
+            .getOne();
+        return location;
+    };
+
+    private getUserLocation = async (userID: number) => {
+        const queryBuilder = this.userRepository.createQueryBuilder('user');
+        const user = await queryBuilder
+            .select(['user.userID', 'location.suburb'])
+            .leftJoin('user.location', 'location')
+            .where('user.userID = :userID', { userID: userID })
+            .getOne();
+
+        return user as User;
     };
 
     private updateEventDetails = async (body: UpdateEventDTO, eventID: number) => {
@@ -361,8 +404,12 @@ class EventService implements BaseService {
         return event1.distance > event2.distance ? 1 : -1;
     };
 
-    private constructEventDetailsData = (event: Event, participants: User[], participated: boolean) => {
-        const participantsList = participants.map((participant) => this.constructParticipantData(participant));
+    private constructEventDetailsData = async (
+        event: Event,
+        participants: Partial<UserDTO>[],
+        participated: boolean,
+        location: Partial<Location>,
+    ) => {
         const eventDetailsData: EventDetails = {
             eventID: event.eventID,
             eventName: event.eventName,
@@ -372,23 +419,57 @@ class EventService implements BaseService {
             endTime: event.endTime,
             longitude: event.longitude,
             latitude: event.latitude,
+            location: location,
+            locationName: event.locationName,
+            shortDescription: event.shortDescription,
             description: event.description,
             eventCreator: event.eventCreator,
             participants: participants.length,
-            participantsList: participantsList,
+            participantsList: participants,
             participated: participated,
         };
         return eventDetailsData;
     };
 
-    private constructParticipantData = (user: User) => {
-        const participantData: Partial<User> = {
+    private constructParticipantsData = async (participants: User[]) => {
+        const participantsList = participants.map(
+            async (participant) => await this.constructParticipantData(participant),
+        );
+        return Promise.all(participantsList);
+    };
+
+    private constructParticipantData = async (user: User) => {
+        let locationData: Partial<Location>;
+
+        if (user.isShareLocation) {
+            const userLocation = await this.getUserLocation(user.userID);
+            locationData = this.constructUserLocationData(userLocation.location);
+        }
+
+        const participantData: Partial<UserDTO> = {
             userID: user.userID,
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
+            location: locationData,
+            isShareLocation: user.isShareLocation,
         };
         return participantData;
+    };
+
+    private constructUserLocationData = (location: Location) => {
+        const locationData: Partial<Location> = {
+            suburb: location.suburb,
+        };
+        return locationData;
+    };
+
+    private constructEventLocationData = (location: Location) => {
+        const locationData: Partial<Location> = {
+            suburb: location.suburb,
+            city: location.city,
+        };
+        return locationData;
     };
 
     private getParticipated = (participants: User[], username: string) => {

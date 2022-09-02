@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
+import Location from '../../location/entity/location.entity';
 
 @Entity()
 class Event {
@@ -49,7 +50,17 @@ class Event {
     @Column({ name: 'latitude', type: 'float' })
     latitude: number;
 
-    @Column({ name: 'description' })
+    @ManyToOne(() => Location, (location) => location.locationID)
+    @JoinColumn({ name: 'location' })
+    location: Location;
+
+    @Column({ name: 'location_name', nullable: false, default: 'Location Unknown' })
+    locationName: string;
+
+    @Column({ name: 'short_description', nullable: false, default: 'No short description.' })
+    shortDescription: string;
+
+    @Column({ name: 'description', default: 'No description.' })
     description: string;
 
     @ManyToOne(() => User)

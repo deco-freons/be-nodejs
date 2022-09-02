@@ -2,7 +2,6 @@ import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 import { getDistance } from 'geolib';
 
 import BaseService from '../../common/service/base.service';
-import BadRequestException from '../../common/exception/badRequest.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
 
 import User from '../../auth/entity/user.entity';
@@ -43,7 +42,7 @@ class UserService implements BaseService {
 
             const preferenceIDs = body.preferences;
             const preferences = await this.getPreferencesByID(preferenceIDs);
-            if (!preferences) throw new BadRequestException('Preferences Invalid.');
+            if (!preferences) throw new NotFoundException('Preferences Invalid.');
 
             await this.updateUserPreferences(user, preferences);
 
@@ -115,7 +114,7 @@ class UserService implements BaseService {
 
             const preferenceIDs = body.preferences;
             const preferences = await this.getPreferencesByID(preferenceIDs);
-            if (!preferences) throw new BadRequestException('Preferences Invalid.');
+            if (!preferences) throw new NotFoundException('Preferences Invalid.');
 
             await this.updateUserPreferences(user, preferences);
 

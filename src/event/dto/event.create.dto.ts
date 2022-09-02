@@ -1,4 +1,14 @@
-import { IsIn, IsISO8601, IsLatitude, IsLongitude, IsMilitaryTime, IsString, MinLength } from 'class-validator';
+import {
+    IsIn,
+    IsISO8601,
+    IsLatitude,
+    IsLongitude,
+    IsMilitaryTime,
+    IsNumber,
+    IsString,
+    MaxLength,
+    MinLength,
+} from 'class-validator';
 
 class CreateEventDTO {
     @IsString()
@@ -22,6 +32,16 @@ class CreateEventDTO {
 
     @IsLatitude()
     latitude: number;
+
+    @IsNumber()
+    location: number;
+
+    @IsString()
+    locationName: string;
+
+    @IsString()
+    @MaxLength(100)
+    shortDescription: string;
 
     @IsString()
     description: string;
