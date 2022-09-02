@@ -16,6 +16,9 @@ import JWT from '../../common/utils/jwt';
 import { EMAIL } from '../../common/enum/email.enum';
 import { TTL } from '../../common/enum/token.enum';
 
+import Preference from '../../user/entity/preference.entity';
+import Location from '../../location/entity/location.entity';
+
 import User from '../entity/user.entity';
 import UserDTO from '../dto/user.dto';
 import RegisterDTO from '../dto/register.dto';
@@ -25,9 +28,6 @@ import VerifyDTO from '../dto/verify.dto';
 import UserPayload from '../payload/login.payload';
 import { TokenResponseLocals } from '../response/token.response';
 import { ForgetPasswordDTO, ForgetPasswordCompleteDTO } from '../dto/forgetPassword.dto';
-
-import Preference from '../../user/entity/preference.entity';
-import Location from '../../location/entity/location.entity';
 
 class AuthService implements BaseService {
     userRepository: Repository<ObjectLiteral>;

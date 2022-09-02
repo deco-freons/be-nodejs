@@ -1,5 +1,5 @@
 import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/response/base.response';
-import User from '../../auth/entity/user.entity';
+import UserDTO from '../../auth/dto/user.dto';
 
 interface ReadUserResponse<
     ResBody = ReadUserResponseBody,
@@ -7,7 +7,7 @@ interface ReadUserResponse<
 > extends BaseResponse<ResBody, Locals> {}
 
 interface ReadUserResponseBody extends BaseResponseBody {
-    user: Partial<User>;
+    user: UserDTO;
 }
 
 interface ReadUserResponseLocals extends BaseLocals {
