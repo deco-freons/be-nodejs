@@ -5,6 +5,7 @@ import BaseService from '../../common/service/base.service';
 import ConflictException from '../../common/exception/conflict.exception';
 import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
+import { SORT_BY, UNIX } from '../../common/enum/event.enum';
 
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
@@ -18,7 +19,7 @@ import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
-import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
+import { FilterEventDTO, SortEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
@@ -79,22 +80,26 @@ class EventService implements BaseService {
 
     public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
         try {
+            const todaysDate = new Date(body.todaysDate);
+
             const begin = parseInt(query.skip) * parseInt(query.take);
             const end = begin + parseInt(query.take);
 
             const longitude = body.longitude;
             const latitude = body.latitude;
+            const filter = body.filter;
+            const sort = body.sort;
 
-            let categories = body.categories;
+            let categories;
+            if (filter) categories = filter.categories;
             if (!categories) categories = await this.getAllCategoriesID();
             const events = await this.getEventsByCategories(categories);
             const eventsData = await this.constructEventsData(events, longitude, latitude);
-            const sortedAndFilteredEventsWithinRadius = this.getEventsWithinRadius(eventsData, body.radius).slice(
-                begin,
-                end,
-            );
 
-            return { message: 'Successfully retrieve events.', events: sortedAndFilteredEventsWithinRadius };
+            const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
+            const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
+
+            return { message: 'Successfully retrieve events.', events: sortedAndFilteredEvents.slice(begin, end) };
         } catch (error) {
             throw error;
         }
@@ -384,11 +389,46 @@ class EventService implements BaseService {
         await queryBuilder.delete().from(Event).where('eventID = :eventID', { eventID: eventID }).execute();
     };
 
-    private getEventsWithinRadius = (events: Partial<EventDetails>[], radius: number) => {
-        const eventsWithinRadius = events
-            .filter((event) => this.filterEventsWithinRadius(event, radius))
-            .sort((event1, event2) => this.sortEventsPopularity(event1, event2));
-        return eventsWithinRadius;
+    private filterEvents = (events: Partial<EventDetails>[], filter: FilterEventDTO, todaysDate: Date) => {
+        let filteredEvents = events;
+
+        if (!filter) return filteredEvents;
+
+        const daysToEvent = filter.daysToEvent;
+        const radius = filter.radius;
+
+        if (radius && radius.length > 0) {
+            const farthestDistance = Math.max(...radius);
+            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithinRadius(event, farthestDistance));
+        }
+
+        if (daysToEvent && daysToEvent.length > 0) {
+            const farthestDays = Math.max(...daysToEvent);
+            filteredEvents = filteredEvents.filter((event) =>
+                this.filterEventsWithinDays(event, farthestDays, todaysDate),
+            );
+        }
+
+        return filteredEvents;
+    };
+
+    private sortEvents = (events: Partial<EventDetails>[], sort: SortEventDTO) => {
+        let sortedEvents = events;
+
+        if (!sort) return sortedEvents;
+
+        const sortBy = sort.sortBy;
+        if (!sortBy) return sortedEvents;
+
+        if (sortBy.toUpperCase() == SORT_BY.DISTANCE) {
+            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByDistance(event1, event2));
+        } else if (sortBy.toUpperCase() == SORT_BY.POPULARITY) {
+            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByPopularity(event1, event2));
+        } else if (sortBy.toUpperCase() == SORT_BY.DAYS_TO_EVENT) {
+            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByDays(event1, event2));
+        }
+
+        return sortedEvents;
     };
 
     private constructEventsData = async (events: Event[], longitude: number, latitude: number) => {
@@ -424,8 +464,23 @@ class EventService implements BaseService {
         return event.distance <= radius;
     };
 
-    private sortEventsPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
+    private filterEventsWithinDays = (event: Partial<EventDetails>, daysToEvent: number, todaysDate: Date) => {
+        const eventDate = new Date(event.date);
+        const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
+        const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
+        return difference >= 0 && difference <= daysToEventInSeconds;
+    };
+
+    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
+        return event1.distance > event2.distance ? 1 : -1;
+    };
+
+    private sortEventsByPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
         return event1.participants < event2.participants ? 1 : -1;
+    };
+
+    private sortEventsByDays = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
+        return event1.date > event2.date ? 1 : -1;
     };
 
     private constructEventDetailsData = async (
