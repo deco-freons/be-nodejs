@@ -76,7 +76,7 @@ class AuthService implements BaseService {
             if (!matched) throw new BadRequestException('Username or password does not match.');
 
             let locationData: Partial<Location>;
-            if (user.isShareLocation && user.location) {
+            if (user.location) {
                 locationData = this.constructLocationData(user.location);
             }
 
@@ -252,7 +252,7 @@ class AuthService implements BaseService {
             if (!user) throw new NotFoundException('User does not exist.');
 
             let locationData: Partial<Location>;
-            if (user.isShareLocation && user.location) {
+            if (user.location) {
                 locationData = this.constructLocationData(user.location);
             }
 
@@ -295,7 +295,7 @@ class AuthService implements BaseService {
             const refreshTokenNew = JWT.signRefreshToken(userPayload);
 
             let locationData: Partial<Location>;
-            if (user.isShareLocation && user.location) {
+            if (user.location) {
                 locationData = this.constructLocationData(user.location);
             }
 
