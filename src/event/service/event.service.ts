@@ -105,6 +105,7 @@ class EventService implements BaseService {
             const username = locals.username;
             const eventID = body.eventID;
             const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
 
             let locationData: Partial<Location>;
             if (event.location) locationData = this.constructEventLocationData(event.location);
