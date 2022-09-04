@@ -397,15 +397,13 @@ class EventService implements BaseService {
         const daysToEvent = filter.daysToEvent;
         const radius = filter.radius;
 
-        if (radius && radius.length > 0) {
-            const farthestDistance = Math.max(...radius);
-            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithinRadius(event, farthestDistance));
+        if (radius) {
+            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithinRadius(event, radius));
         }
 
-        if (daysToEvent && daysToEvent.length > 0) {
-            const farthestDays = Math.max(...daysToEvent);
+        if (daysToEvent) {
             filteredEvents = filteredEvents.filter((event) =>
-                this.filterEventsWithinDays(event, farthestDays, todaysDate),
+                this.filterEventsWithinDays(event, daysToEvent, todaysDate),
             );
         }
 

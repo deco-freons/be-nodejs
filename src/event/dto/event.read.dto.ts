@@ -8,10 +8,10 @@ class FilterEventDTO {
 
     @IsIn(EVENT.DAYS_TO_EVENT, { each: true })
     @IsOptional()
-    daysToEvent: number[];
+    daysToEvent: number;
 
     @IsIn(EVENT.RADIUS, { each: true })
-    radius: number[];
+    radius: number;
 }
 
 class SortEventDTO {
