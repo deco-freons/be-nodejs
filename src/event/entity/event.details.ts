@@ -1,5 +1,7 @@
 import User from '../../auth/entity/user.entity';
+import UserDTO from '../../auth/dto/user.dto';
 import Preference from '../../user/entity/preference.entity';
+import Location from '../../location/entity/location.entity';
 
 class EventDetails {
     eventID: number;
@@ -10,11 +12,14 @@ class EventDetails {
     endTime: string;
     longitude: number;
     latitude: number;
+    location: Partial<Location>;
+    locationName: string;
     distance?: number;
+    shortDescription: string;
     description: string;
     eventCreator: User;
     participants: number;
-    participantsList: Partial<User>[];
+    participantsList: Partial<UserDTO>[];
     participated: boolean;
 }
 
