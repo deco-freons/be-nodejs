@@ -10,9 +10,20 @@ const validationMiddleware = <T>(type: ClassConstructor<T>, property: RequestTyp
         validate(plainToInstance<T, RequestTypes>(type, request[property]), { skipMissingProperties }).then(
             (errors: ValidationError[]) => {
                 if (errors.length > 0) {
-                    const message = errors
+                    let message = errors
                         .map((error: ValidationError) => Object.values(error.constraints || ''))
                         .join(', ');
+                    if (message == '')
+                        message = errors
+                            .map((error: ValidationError) =>
+                                error.children.map((children: ValidationError) =>
+                                    children.children.map((child: ValidationError) =>
+                                        Object.values(child.constraints || ''),
+                                    ),
+                                ),
+                            )
+                            .join(', ');
+
                     next(new BaseException(400, message));
                 } else {
                     next();
