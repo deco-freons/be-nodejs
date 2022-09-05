@@ -5,7 +5,7 @@ import BaseService from '../../common/service/base.service';
 import ConflictException from '../../common/exception/conflict.exception';
 import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
-import { SORT_BY, UNIX } from '../../common/enum/event.enum';
+import { LOGICAL_OPERATION, SORT_BY, UNIX } from '../../common/enum/event.enum';
 
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
@@ -91,7 +91,7 @@ class EventService implements BaseService {
             const sort = body.sort;
 
             let categories;
-            if (filter) categories = filter.categories;
+            if (filter && filter.eventCategories) categories = filter.eventCategories.category;
             if (!categories) categories = await this.getAllCategoriesID();
             const events = await this.getEventsByCategories(categories);
             const eventsData = await this.constructEventsData(events, longitude, latitude);
@@ -394,16 +394,16 @@ class EventService implements BaseService {
 
         if (!filter) return filteredEvents;
 
-        const daysToEvent = filter.daysToEvent;
-        const radius = filter.radius;
+        const daysToEventDTO = filter.daysToEvent;
+        const radiusDTO = filter.eventRadius;
 
-        if (radius) {
-            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithinRadius(event, radius));
+        if (radiusDTO && radiusDTO.radius) {
+            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithinRadius(event, radiusDTO.radius, radiusDTO.isMoreOrLess));
         }
 
-        if (daysToEvent) {
+        if (daysToEventDTO && daysToEventDTO.days) {
             filteredEvents = filteredEvents.filter((event) =>
-                this.filterEventsWithinDays(event, daysToEvent, todaysDate),
+                this.filterEventsWithinDays(event, daysToEventDTO.days, todaysDate, daysToEventDTO.isMoreOrLess),
             );
         }
 
@@ -458,15 +458,22 @@ class EventService implements BaseService {
         return distance;
     };
 
-    private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number) => {
-        return event.distance <= radius;
+    private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number, isMoreOrLess: string) => {
+        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return event.distance <= radius;
+        else return event.distance >= radius;
     };
 
-    private filterEventsWithinDays = (event: Partial<EventDetails>, daysToEvent: number, todaysDate: Date) => {
+    private filterEventsWithinDays = (
+        event: Partial<EventDetails>,
+        daysToEvent: number,
+        todaysDate: Date,
+        isMoreOrLess: string,
+    ) => {
         const eventDate = new Date(event.date);
         const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
         const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
-        return difference >= 0 && difference <= daysToEventInSeconds;
+        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return difference >= 0 && difference <= daysToEventInSeconds;
+        else return difference >= daysToEventInSeconds;
     };
 
     private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {

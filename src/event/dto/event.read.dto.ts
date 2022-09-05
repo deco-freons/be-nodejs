@@ -1,17 +1,23 @@
 import { IsIn, IsISO8601, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { EVENT } from '../../common/enum/event.enum';
+import CategoriesDTO from '../../common/dto/category.dto';
+import DaysDTO from '../../common/dto/days.dto';
+import RadiusDTO from '../../common/dto/radius.dto';
 import UserLongLatDTO from '../../user/dto/user.longlat.dto';
+
 class FilterEventDTO {
-    @IsIn(EVENT.CATEGORIES, { each: true })
-    @IsOptional()
-    categories: string[];
+    @ValidateNested()
+    @Type(() => CategoriesDTO)
+    eventCategories: CategoriesDTO;
 
-    @IsIn(EVENT.DAYS_TO_EVENT, { each: true })
-    @IsOptional()
-    daysToEvent: number;
+    @ValidateNested()
+    @Type(() => DaysDTO)
+    daysToEvent: DaysDTO;
 
-    @IsIn(EVENT.RADIUS, { each: true })
-    radius: number;
+    @ValidateNested()
+    @Type(() => RadiusDTO)
+    eventRadius: RadiusDTO;
 }
 
 class SortEventDTO {
@@ -20,11 +26,14 @@ class SortEventDTO {
     @IsOptional()
     sortBy: string;
 }
+
 class ReadEventDTO extends UserLongLatDTO {
     @ValidateNested()
+    @Type(() => FilterEventDTO)
     filter: FilterEventDTO;
 
     @ValidateNested()
+    @Type(() => SortEventDTO)
     sort: SortEventDTO;
 
     @IsISO8601()
