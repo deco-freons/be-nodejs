@@ -13,14 +13,18 @@ const validationMiddleware = <T>(type: ClassConstructor<T>, property: RequestTyp
                     let message = errors
                         .map((error: ValidationError) => Object.values(error.constraints || ''))
                         .join(', ');
-                    if (message == '')
+                    if (message == '' || message == ', ')
                         message = errors
                             .map((error: ValidationError) =>
-                                error.children.map((children: ValidationError) =>
-                                    children.children.map((child: ValidationError) =>
-                                        Object.values(child.constraints || ''),
-                                    ),
-                                ),
+                                error.children.map((children: ValidationError) => {
+                                    if (children.children) {
+                                        return children.children.map((child: ValidationError) =>
+                                            Object.values(child.constraints || ''),
+                                        );
+                                    } else {
+                                        return 'Invalid object';
+                                    }
+                                }),
                             )
                             .join(', ');
 
