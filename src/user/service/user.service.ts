@@ -215,8 +215,8 @@ class UserService implements BaseService {
                 'categories.preferenceID',
                 'categories.preferenceName',
             ])
-            .innerJoin('event.categories', 'categories')
-            .innerJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.categories', 'categories')
+            .leftJoin('event.eventCreator', 'event_creator')
             .where('event.eventCreator = :userID', { userID: userID })
             .getMany();
         return events as Event[];
