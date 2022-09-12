@@ -1,6 +1,8 @@
-import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 import { getDistance } from 'geolib';
+import { SearchClient, SearchIndex } from 'algoliasearch';
+import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 
+import Algolia from '../../common/config/algolia';
 import BaseService from '../../common/service/base.service';
 import ConflictException from '../../common/exception/conflict.exception';
 import ForbiddenException from '../../common/exception/forbidden.exception';
@@ -32,12 +34,21 @@ class EventService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
     categoryRepository: Repository<ObjectLiteral>;
     locationRepository: Repository<ObjectLiteral>;
+    algolia: SearchClient;
+    index: SearchIndex;
 
     constructor(database: DataSource) {
         this.eventRepository = database.getRepository(Event);
         this.userRepository = database.getRepository(User);
         this.categoryRepository = database.getRepository(Preference);
         this.locationRepository = database.getRepository(Location);
+
+        this.algolia = Algolia;
+        this.index = this.algolia.initIndex('event');
+
+        this.index.setSettings({
+            searchableAttributes: ['eventName', 'eventCreator', 'locationName', 'suburb', 'city', 'state', 'country'],
+        });
     }
 
     public createEvent = async (body: CreateEventDTO, locals: CreateEventResponseLocals) => {
@@ -73,9 +84,27 @@ class EventService implements BaseService {
             await this.updateEventCategories(event, categories);
             await this.createEventJoinedByUser(user, event);
 
+            const data = this.constructAlgoliaData(event.eventID, event, location, user, categories);
+            await this.index.saveObject(data);
+
             return { message: `Successfully create ${event.eventName} event.` };
         } catch (error) {
             throw error;
+        }
+    };
+
+    public saveToAlgolia = async () => {
+        try {
+            const events = await this.getEvents();
+            events.map(async (event) => {
+                const data = this.constructAlgoliaData2(event);
+                await this.index.saveObject(data);
+            });
+            console.log(events);
+
+            return { message: 'Success' };
+        } catch (e) {
+            throw e;
         }
     };
 
@@ -157,6 +186,9 @@ class EventService implements BaseService {
 
             await this.updateEventCategories(event, categories);
 
+            const data = this.constructAlgoliaData(eventID, body, location, event.eventCreator, categories);
+            await this.index.saveObject(data);
+
             return { message: `Successfully update ${event.eventName} event.` };
         } catch (error) {
             throw error;
@@ -173,6 +205,8 @@ class EventService implements BaseService {
                 throw new ForbiddenException(`You are unauthorized to delete ${event.eventName} event.`);
 
             await this.deleteEventByEventID(eventID);
+
+            await this.index.deleteObject(eventID.toString());
 
             return { message: `Successfully delete ${event.eventName} event.` };
         } catch (error) {
@@ -289,14 +323,6 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
         return participants as User[];
-    };
-
-    private getEventParticipantsMap = async (events: Event[]) => {
-        const participantsMap = events.map(async (event) => {
-            const participants = await this.getEventParticipants(event);
-            return participants.length;
-        });
-        return Promise.all(participantsMap);
     };
 
     private getAllCategoriesID = async () => {
@@ -458,6 +484,78 @@ class EventService implements BaseService {
             participants: participants.length,
         };
         return eventData;
+    };
+
+    private getEvents = async () => {
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
+        const events = await queryBuilder
+            .select([
+                'event.eventID',
+                'event.eventName',
+                'event.shortDescription',
+                'event.description',
+                'categories.preferenceName',
+                'event.locationName',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'location.country',
+                'event.date',
+                'event.startTime',
+                'event.endTime',
+                'event_creator.username',
+            ])
+            .innerJoin('event.categories', 'categories')
+            .innerJoin('event.eventCreator', 'event_creator')
+            .innerJoin('event.location', 'location')
+            .getMany();
+        return events as Event[];
+    };
+
+    private constructAlgoliaData2 = (event: Event) => {
+        const data = {
+            objectID: event.eventID,
+            eventName: event.eventName,
+            shortDescription: event.shortDescription,
+            description: event.description,
+            categories: event.categories.map((category) => category.preferenceName),
+            locationName: event.locationName,
+            suburb: event.location.suburb,
+            city: event.location.city,
+            state: event.location.state,
+            country: event.location.country,
+            date: event.date,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            eventCreator: event.eventCreator.username,
+        };
+        return data;
+    };
+
+    private constructAlgoliaData = (
+        eventID: number,
+        event: Event | UpdateEventDTO,
+        location: Location,
+        creator: User,
+        categories: Preference[],
+    ) => {
+        const data = {
+            objectID: eventID,
+            eventName: event.eventName,
+            shortDescription: event.shortDescription,
+            description: event.description,
+            categories: categories.map((category) => category.preferenceName),
+            locationName: event.locationName,
+            suburb: location.suburb,
+            city: location.city,
+            state: location.state,
+            country: location.country,
+            date: event.date,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            eventCreator: creator.username,
+        };
+        return data;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
