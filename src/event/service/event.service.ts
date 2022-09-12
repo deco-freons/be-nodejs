@@ -469,7 +469,7 @@ class EventService implements BaseService {
 
     private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number, isMoreOrLess: string) => {
         if (isMoreOrLess == LOGICAL_OPERATION.LESS) return event.distance <= radius;
-        else return event.distance >= radius;
+        return event.distance >= radius;
     };
 
     private filterEventsWithinDays = (
@@ -482,22 +482,22 @@ class EventService implements BaseService {
         const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
         const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
         if (isMoreOrLess == LOGICAL_OPERATION.LESS) return difference >= 0 && difference <= daysToEventInSeconds;
-        else return difference >= daysToEventInSeconds;
+        return difference >= daysToEventInSeconds;
     };
 
     private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
         if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.distance < event2.distance ? 1 : -1;
-        else return event1.distance > event2.distance ? 1 : -1;
+        return event1.distance > event2.distance ? 1 : -1;
     };
 
     private sortEventsByPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
         if (sort.isMoreOrLess == LOGICAL_OPERATION.LESS) return event1.participants > event2.participants ? 1 : -1;
-        else return event1.participants < event2.participants ? 1 : -1;
+        return event1.participants < event2.participants ? 1 : -1;
     };
 
     private sortEventsByDays = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
         if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.date < event2.date ? 1 : -1;
-        else return event1.date > event2.date ? 1 : -1;
+        return event1.date > event2.date ? 1 : -1;
     };
 
     private constructEventDetailsData = async (
