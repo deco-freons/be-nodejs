@@ -5,6 +5,7 @@ import BaseService from '../../common/service/base.service';
 import ConflictException from '../../common/exception/conflict.exception';
 import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
+import SortDTO from '../../common/dto/sort.dto';
 import { LOGICAL_OPERATION, SORT_BY, UNIX } from '../../common/enum/event.enum';
 
 import User from '../../auth/entity/user.entity';
@@ -19,7 +20,7 @@ import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
-import { FilterEventDTO, SortEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
+import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
@@ -416,7 +417,7 @@ class EventService implements BaseService {
         return filteredEvents;
     };
 
-    private sortEvents = (events: Partial<EventDetails>[], sort: SortEventDTO) => {
+    private sortEvents = (events: Partial<EventDetails>[], sort: SortDTO) => {
         let sortedEvents = events;
 
         if (!sort) return sortedEvents;
@@ -425,11 +426,11 @@ class EventService implements BaseService {
         if (!sortBy) return sortedEvents;
 
         if (sortBy.toUpperCase() == SORT_BY.DISTANCE) {
-            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByDistance(event1, event2));
+            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByDistance(event1, event2, sort));
         } else if (sortBy.toUpperCase() == SORT_BY.POPULARITY) {
-            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByPopularity(event1, event2));
+            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByPopularity(event1, event2, sort));
         } else if (sortBy.toUpperCase() == SORT_BY.DAYS_TO_EVENT) {
-            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByDays(event1, event2));
+            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByDays(event1, event2, sort));
         }
 
         return sortedEvents;
@@ -484,16 +485,19 @@ class EventService implements BaseService {
         else return difference >= daysToEventInSeconds;
     };
 
-    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
-        return event1.distance > event2.distance ? 1 : -1;
+    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
+        if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.distance < event2.distance ? 1 : -1;
+        else return event1.distance > event2.distance ? 1 : -1;
     };
 
-    private sortEventsByPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
-        return event1.participants < event2.participants ? 1 : -1;
+    private sortEventsByPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
+        if (sort.isMoreOrLess == LOGICAL_OPERATION.LESS) return event1.participants > event2.participants ? 1 : -1;
+        else return event1.participants < event2.participants ? 1 : -1;
     };
 
-    private sortEventsByDays = (event1: Partial<EventDetails>, event2: Partial<EventDetails>) => {
-        return event1.date > event2.date ? 1 : -1;
+    private sortEventsByDays = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
+        if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.date < event2.date ? 1 : -1;
+        else return event1.date > event2.date ? 1 : -1;
     };
 
     private constructEventDetailsData = async (
