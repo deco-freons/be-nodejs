@@ -1,10 +1,11 @@
-import { IsIn, IsISO8601, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsISO8601, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { EVENT } from '../../common/enum/event.enum';
+
 import CategoriesDTO from '../../common/dto/category.dto';
 import DaysDTO from '../../common/dto/days.dto';
 import RadiusDTO from '../../common/dto/radius.dto';
 import UserLongLatDTO from '../../user/dto/user.longlat.dto';
+import SortDTO from '../../common/dto/sort.dto';
 
 class FilterEventDTO {
     @ValidateNested()
@@ -20,21 +21,14 @@ class FilterEventDTO {
     eventRadius: RadiusDTO;
 }
 
-class SortEventDTO {
-    @IsIn(EVENT.SORT_BY)
-    @IsString()
-    @IsOptional()
-    sortBy: string;
-}
-
 class ReadEventDTO extends UserLongLatDTO {
     @ValidateNested()
     @Type(() => FilterEventDTO)
     filter: FilterEventDTO;
 
     @ValidateNested()
-    @Type(() => SortEventDTO)
-    sort: SortEventDTO;
+    @Type(() => SortDTO)
+    sort: SortDTO;
 
     @IsISO8601()
     todaysDate: string;
@@ -48,4 +42,4 @@ class ReadEventQueryDTO {
     take: string;
 }
 
-export { FilterEventDTO, SortEventDTO, ReadEventDTO, ReadEventQueryDTO };
+export { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO };
