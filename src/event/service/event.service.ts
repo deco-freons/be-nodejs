@@ -243,8 +243,8 @@ class EventService implements BaseService {
     private getEventByEventID = async (eventID: number) => {
         const queryBuilder = this.eventRepository.createQueryBuilder('event');
         const event = await queryBuilder
-            .innerJoinAndSelect('event.categories', 'categories')
-            .innerJoin('event.eventCreator', 'event_creator')
+            .leftJoinAndSelect('event.categories', 'categories')
+            .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .addSelect(['location.locationID', 'location.suburb', 'location.city', 'location.state'])
             .addSelect(['event_creator.firstName', 'event_creator.lastName', 'event_creator.username'])
@@ -263,12 +263,16 @@ class EventService implements BaseService {
                 'event.longitude',
                 'event.latitude',
                 'event.locationName',
+                'location.suburb',
+                'location.city',
+                'location.state',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
             ])
-            .innerJoin('event.categories', 'categories')
-            .innerJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.categories', 'categories')
+            .leftJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.location', 'location')
             .where('event_categories.category_id IN (:...categories)', { categories: categories })
             .getMany();
         return events as Event[];
@@ -398,7 +402,9 @@ class EventService implements BaseService {
         const radiusDTO = filter.eventRadius;
 
         if (radiusDTO && radiusDTO.radius) {
-            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithinRadius(event, radiusDTO.radius, radiusDTO.isMoreOrLess));
+            filteredEvents = filteredEvents.filter((event) =>
+                this.filterEventsWithinRadius(event, radiusDTO.radius, radiusDTO.isMoreOrLess),
+            );
         }
 
         if (daysToEventDTO && daysToEventDTO.days) {
@@ -437,6 +443,7 @@ class EventService implements BaseService {
     private constructEventData = async (event: Event, longitude: number, latitude: number) => {
         const distance = this.calculateDistanceBetweenUserAndEventLocation(event, longitude, latitude);
         const participants = await this.getEventParticipants(event);
+        const location = this.constructEventLocationData(event.location);
         const eventData: Partial<EventDetails> = {
             eventID: event.eventID,
             eventName: event.eventName,
@@ -444,6 +451,7 @@ class EventService implements BaseService {
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
+            location: location,
             locationName: event.locationName,
             eventCreator: event.eventCreator,
             participants: participants.length,
@@ -528,6 +536,8 @@ class EventService implements BaseService {
         if (user.isShareLocation) {
             const userLocation = await this.getUserLocation(user.userID);
             locationData = this.constructUserLocationData(userLocation.location);
+        } else {
+            locationData = this.constructUserLocationData(undefined);
         }
 
         const participantData: Partial<UserDTO> = {
@@ -543,7 +553,7 @@ class EventService implements BaseService {
 
     private constructUserLocationData = (location: Location) => {
         const locationData: Partial<Location> = {
-            suburb: location.suburb,
+            suburb: location.suburb ?? 'No Location',
         };
         return locationData;
     };
@@ -552,6 +562,7 @@ class EventService implements BaseService {
         const locationData: Partial<Location> = {
             suburb: location.suburb,
             city: location.city,
+            state: location.state,
         };
         return locationData;
     };
