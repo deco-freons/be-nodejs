@@ -557,7 +557,7 @@ class EventService implements BaseService {
 
     private constructUserLocationData = (location: Location) => {
         const locationData: Partial<Location> = {
-            suburb: location.suburb ?? 'No Location',
+            suburb: location ? location.suburb : 'No Location',
         };
         return locationData;
     };
