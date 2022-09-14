@@ -6,7 +6,7 @@ import NotFoundException from '../../common/exception/notFound.exception';
 
 import User from '../../auth/entity/user.entity';
 import Event from '../../event/entity/event.entity';
-import EventDetails from '../../event/entity/event.details';
+import EventDetails from '../../event/entity/event.details.entity';
 import Location from '../../location/entity/location.entity';
 import UserDTO from '../../auth/dto/user.dto';
 

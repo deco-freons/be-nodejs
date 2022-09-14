@@ -16,7 +16,8 @@ import Location from '../../location/entity/location.entity';
 import UserDTO from '../../auth/dto/user.dto';
 
 import Event from '../entity/event.entity';
-import EventDetails from '../entity/event.details';
+import EventAlgolia from '../entity/event.algolia.entity';
+import EventDetails from '../entity/event.details.entity';
 import CreateEventDTO from '../dto/event.create.dto';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
@@ -48,6 +49,7 @@ class EventService implements BaseService {
 
         this.index.setSettings({
             searchableAttributes: ['eventName', 'eventCreator', 'locationName', 'suburb', 'city', 'state', 'country'],
+            attributesForFaceting: ['categories'],
         });
     }
 
@@ -93,21 +95,6 @@ class EventService implements BaseService {
         }
     };
 
-    public saveToAlgolia = async () => {
-        try {
-            const events = await this.getEvents();
-            events.map(async (event) => {
-                const data = this.constructAlgoliaData2(event);
-                await this.index.saveObject(data);
-            });
-            console.log(events);
-
-            return { message: 'Success' };
-        } catch (e) {
-            throw e;
-        }
-    };
-
     public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
         try {
             const todaysDate = new Date(body.todaysDate);
@@ -119,11 +106,16 @@ class EventService implements BaseService {
             const latitude = body.latitude;
             const filter = body.filter;
             const sort = body.sort;
+            const keyword = body.search.keyword;
 
             let categories;
             if (filter && filter.eventCategories) categories = filter.eventCategories.category;
             if (!categories) categories = await this.getAllCategoriesID();
-            const events = await this.getEventsByCategories(categories);
+            const categoryString = `${this.constructCategoryString(categories)}`;
+
+            const eventsAlgolia = await this.index.search<EventAlgolia>(keyword, { filters: categoryString });
+            const eventsIDs = eventsAlgolia.hits.map((event) => event.eventID);
+            const events = await this.getEventsByEventIDs(eventsIDs);
             const eventsData = await this.constructEventsData(events, longitude, latitude);
 
             const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
@@ -254,6 +246,20 @@ class EventService implements BaseService {
         }
     };
 
+    public saveToAlgolia = async () => {
+        try {
+            const events = await this.getEvents();
+            events.map(async (event) => {
+                const data = this.constructSaveAlgoliaData(event);
+                await this.index.saveObject(data);
+            });
+
+            return { message: 'Success import data to algolia' };
+        } catch (e) {
+            throw e;
+        }
+    };
+
     private createEventDetails = async (eventData: Partial<Event>) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const eventInsertResult = await queryBuilder.insert().into(Event).values(eventData).returning('*').execute();
@@ -288,7 +294,7 @@ class EventService implements BaseService {
         return event as Event;
     };
 
-    private getEventsByCategories = async (categories: string[]) => {
+    private getEventsByEventIDs = async (eventIDs: number[]) => {
         const queryBuilder = this.eventRepository.createQueryBuilder('event');
         const events = await queryBuilder
             .select([
@@ -308,7 +314,7 @@ class EventService implements BaseService {
             .leftJoin('event.categories', 'categories')
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
-            .where('event_categories.category_id IN (:...categories)', { categories: categories })
+            .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
             .getMany();
         return events as Event[];
     };
@@ -462,6 +468,11 @@ class EventService implements BaseService {
         return sortedEvents;
     };
 
+    private constructCategoryString = (categories: string[]) => {
+        const categoriesString = categories.map((category) => `categories:${category}`);
+        return categoriesString.join(' OR ');
+    };
+
     private constructEventsData = async (events: Event[], longitude: number, latitude: number) => {
         const eventsData = events.map(async (event) => await this.constructEventData(event, longitude, latitude));
         return Promise.all(eventsData);
@@ -494,8 +505,9 @@ class EventService implements BaseService {
                 'event.eventName',
                 'event.shortDescription',
                 'event.description',
-                'categories.preferenceName',
+                'categories.preferenceID',
                 'event.locationName',
+                'location.locationID',
                 'location.suburb',
                 'location.city',
                 'location.state',
@@ -512,14 +524,16 @@ class EventService implements BaseService {
         return events as Event[];
     };
 
-    private constructAlgoliaData2 = (event: Event) => {
+    private constructSaveAlgoliaData = (event: Event) => {
         const data = {
             objectID: event.eventID,
+            eventID: event.eventID,
             eventName: event.eventName,
             shortDescription: event.shortDescription,
             description: event.description,
-            categories: event.categories.map((category) => category.preferenceName),
+            categories: event.categories.map((category) => category.preferenceID),
             locationName: event.locationName,
+            locationID: event.location.locationID,
             suburb: event.location.suburb,
             city: event.location.city,
             state: event.location.state,
