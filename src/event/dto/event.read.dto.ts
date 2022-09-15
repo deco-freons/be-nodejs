@@ -4,8 +4,9 @@ import { Type } from 'class-transformer';
 import CategoriesDTO from '../../common/dto/category.dto';
 import DaysDTO from '../../common/dto/days.dto';
 import RadiusDTO from '../../common/dto/radius.dto';
-import UserLongLatDTO from '../../user/dto/user.longlat.dto';
+import SearchDTO from '../../common/dto/search.dto';
 import SortDTO from '../../common/dto/sort.dto';
+import UserLongLatDTO from '../../user/dto/user.longlat.dto';
 
 class FilterEventDTO {
     @ValidateNested()
@@ -29,6 +30,10 @@ class ReadEventDTO extends UserLongLatDTO {
     @ValidateNested()
     @Type(() => SortDTO)
     sort: SortDTO;
+
+    @ValidateNested()
+    @Type(() => SearchDTO)
+    search: SearchDTO;
 
     @IsISO8601()
     todaysDate: string;

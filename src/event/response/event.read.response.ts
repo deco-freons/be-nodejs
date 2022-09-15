@@ -1,5 +1,5 @@
 import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/response/base.response';
-import EventDetails from '../entity/event.details';
+import EventDetails from '../entity/event.details.entity';
 
 interface ReadEventResponse<ResBody = ReadEventResponseBody, Locals = ReadEventResponseLocals>
     extends BaseResponse<ResBody, Locals> {}

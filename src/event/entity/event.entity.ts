@@ -21,7 +21,7 @@ class Event {
     @Column({ name: 'event_name' })
     eventName: string;
 
-    @ManyToMany(() => Preference)
+    @ManyToMany(() => Preference, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable({
         name: 'event_categories',
         joinColumn: {
@@ -50,7 +50,7 @@ class Event {
     @Column({ name: 'latitude', type: 'float' })
     latitude: number;
 
-    @ManyToOne(() => Location, (location) => location.locationID)
+    @ManyToOne(() => Location, (location) => location.locationID, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'location' })
     location: Location;
 
@@ -63,11 +63,11 @@ class Event {
     @Column({ name: 'description', default: 'No description.' })
     description: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne(() => User, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'event_creator', referencedColumnName: 'userID' })
     eventCreator: User;
 
-    @ManyToMany(() => User, (user) => user.eventJoined)
+    @ManyToMany(() => User, (user) => user.eventJoined, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     participants: User[];
 
     @CreateDateColumn({ name: 'created_at', select: false })

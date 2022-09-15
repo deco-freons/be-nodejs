@@ -1,4 +1,4 @@
-import EventDetails from '../../event/entity/event.details';
+import EventDetails from '../../event/entity/event.details.entity';
 import Location from '../../location/entity/location.entity';
 import Preference from '../../user/entity/preference.entity';
 

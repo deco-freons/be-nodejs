@@ -39,6 +39,7 @@ class EventController implements BaseController {
     }
 
     private initRoutes() {
+        this.router.post('/algolia', [authorizationMiddleware], this.readAlgoliaHandler);
         this.router.post(
             '/create',
             [authorizationMiddleware, validationMiddleware(CreateEventDTO, RequestTypes.BODY)],
@@ -90,6 +91,15 @@ class EventController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.createEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readAlgoliaHandler = async (request: ReadEventRequest, response: ReadEventResponse, next: NextFunction) => {
+        try {
+            const serviceResponse = await this.service.saveToAlgolia();
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: undefined });
         } catch (error) {
             next(error);
         }
