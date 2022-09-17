@@ -1,4 +1,4 @@
-import { IsISO8601, IsString, ValidateNested } from 'class-validator';
+import { IsISO8601, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 import CategoriesDTO from '../../common/dto/category.dto';
@@ -36,6 +36,7 @@ class ReadEventDTO extends UserLongLatDTO {
     search: SearchDTO;
 
     @IsISO8601()
+    @IsOptional()
     todaysDate: string;
 }
 

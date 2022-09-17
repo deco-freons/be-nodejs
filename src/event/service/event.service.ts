@@ -29,6 +29,7 @@ import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.re
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
 import { EventUserResponseLocals } from '../response/event.user.response';
+import { ReadEventResponseLocals } from '../response/event.read.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -246,6 +247,34 @@ class EventService implements BaseService {
         }
     };
 
+    public readHaveNotYetJoinedEvents = async (
+        body: ReadEventDTO,
+        locals: ReadEventResponseLocals,
+        query: ReadEventQueryDTO,
+    ) => {
+        try {
+            const begin = parseInt(query.skip) * parseInt(query.take);
+            const end = begin + parseInt(query.take);
+
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const sort = body.sort;
+
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventsNotJoined = await this.getUserNotJoinedEvents(user.userID);
+            const eventsData = await this.constructEventsData(eventsNotJoined, longitude, latitude);
+            const sortedEvents = this.sortEvents(eventsData, sort);
+
+            return { message: 'Successfully retrieve not joined events.', events: sortedEvents.slice(begin, end) };
+        } catch (e) {
+            throw e;
+        }
+    };
+
     public saveToAlgolia = async () => {
         try {
             const events = await this.getEvents();
@@ -329,6 +358,23 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
         return participants as User[];
+    };
+
+    private getUserNotJoinedEvents = async (userID: number) => {
+        const eventQueryBuilder = this.eventRepository.createQueryBuilder('event');
+        const userQueryBuilder = this.userRepository.createQueryBuilder('user');
+
+        const eventsJoined = await userQueryBuilder
+            .leftJoinAndSelect('user.eventJoined', 'event')
+            .where('user.userID = :userID', { userID: userID })
+            .getOne();
+        const eventJoinedIDs = eventsJoined.eventJoined.map((cc: Event) => cc.eventID);
+
+        const eventsNotJoined = await eventQueryBuilder
+            .leftJoinAndSelect('event.participants', 'user')
+            .where('event.eventID NOT IN (:...eventIDs)', { eventIDs: [-1, ...eventJoinedIDs] })
+            .getMany();
+        return eventsNotJoined as Event[];
     };
 
     private getAllCategoriesID = async () => {
