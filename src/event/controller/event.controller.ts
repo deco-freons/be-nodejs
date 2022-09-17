@@ -9,7 +9,6 @@ import { RequestTypes } from '../../common/enum/request.enum';
 import EventService from '../service/event.service';
 import CreateEventDTO from '../dto/event.create.dto';
 import CreateEventRequest from '../request/event.create.request';
-import ReadEventResponse from '../response/event.read.response';
 import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import ReadEventDetailsRequest from '../request/event.readDetails.request';
 import UpdateEventDTO from '../dto/event.update.dto';
@@ -19,6 +18,7 @@ import DeleteEventRequest from '../request/event.delete.request';
 import EventUserDTO from '../dto/event.user.dto';
 import EventUserRequest from '../request/event.user.request';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
+import { ReadEventResponse } from '../response/event.read.response';
 import { CreateEventResponse } from '../response/event.create.response';
 import { ReadEventRequest } from '../request/event.read.request';
 import { ReadEventDetailsResponse } from '../response/event.readDetails.response';
@@ -39,7 +39,6 @@ class EventController implements BaseController {
     }
 
     private initRoutes() {
-        this.router.post('/algolia', [authorizationMiddleware], this.readAlgoliaHandler);
         this.router.post(
             '/create',
             [authorizationMiddleware, validationMiddleware(CreateEventDTO, RequestTypes.BODY)],
@@ -79,6 +78,16 @@ class EventController implements BaseController {
             [authorizationMiddleware, validationMiddleware(EventUserDTO, RequestTypes.BODY)],
             this.cancelEventHandler,
         );
+        this.router.post(
+            '/read/not',
+            [
+                authorizationMiddleware,
+                validationMiddleware(ReadEventDTO, RequestTypes.BODY),
+                validationMiddleware(ReadEventQueryDTO, RequestTypes.QUERY),
+            ],
+            this.readHaveNotYetJoinedEventsHandler,
+        );
+        this.router.post('/algolia', [authorizationMiddleware], this.saveToAlgoliaHandler);
     }
 
     private createEventHandler = async (
@@ -91,15 +100,6 @@ class EventController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.createEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
-        } catch (error) {
-            next(error);
-        }
-    };
-
-    private readAlgoliaHandler = async (request: ReadEventRequest, response: ReadEventResponse, next: NextFunction) => {
-        try {
-            const serviceResponse = await this.service.saveToAlgolia();
-            return response.send({ statusCode: 200, message: serviceResponse.message, events: undefined });
         } catch (error) {
             next(error);
         }
@@ -183,6 +183,35 @@ class EventController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.cancelEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readHaveNotYetJoinedEventsHandler = async (
+        request: ReadEventRequest,
+        response: ReadEventResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const locals = response.locals;
+            const query = request.query;
+            const serviceResponse = await this.service.readHaveNotYetJoinedEvents(body, locals, query);
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private saveToAlgoliaHandler = async (
+        _request: ReadEventRequest,
+        response: ReadEventResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const serviceResponse = await this.service.saveToAlgolia();
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: undefined });
         } catch (error) {
             next(error);
         }

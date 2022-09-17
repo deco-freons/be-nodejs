@@ -7,10 +7,6 @@ interface UpsertUserPreferenceResponse<
 
 interface UpsertUserPreferenceResponseBody extends BaseResponseBody {}
 
-interface UpsertUserPreferenceResponseLocals extends BaseLocals {
-    email: string;
-    username: string;
-    isVerified: string;
-}
+interface UpsertUserPreferenceResponseLocals extends BaseLocals {}
 
 export { UpsertUserPreferenceResponse, UpsertUserPreferenceResponseLocals };

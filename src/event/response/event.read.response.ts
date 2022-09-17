@@ -10,4 +10,4 @@ interface ReadEventResponseBody extends BaseResponseBody {
 
 interface ReadEventResponseLocals extends BaseLocals {}
 
-export default ReadEventResponse;
+export { ReadEventResponse, ReadEventResponseLocals };

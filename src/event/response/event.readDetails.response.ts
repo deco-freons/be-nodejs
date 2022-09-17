@@ -9,10 +9,6 @@ interface ReadEventDetailsResponseBody extends BaseResponseBody {
     event: EventDetails;
 }
 
-interface ReadEventDetailsResponseLocals extends BaseLocals {
-    email: string;
-    username: string;
-    isVerified: string;
-}
+interface ReadEventDetailsResponseLocals extends BaseLocals {}
 
 export { ReadEventDetailsResponse, ReadEventDetailsResponseLocals };

@@ -8,10 +8,6 @@ interface ReadUserResponseBody extends BaseResponseBody {
     user: Partial<UserDTO>;
 }
 
-interface ReadUserResponseLocals extends BaseLocals {
-    email: string;
-    username: string;
-    isVerified: string;
-}
+interface ReadUserResponseLocals extends BaseLocals {}
 
 export { ReadUserResponse, ReadUserResponseLocals };

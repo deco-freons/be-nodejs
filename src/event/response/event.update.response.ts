@@ -5,10 +5,6 @@ interface UpdateEventResponse<ResBody = UpdateEventResponseBody, Locals = Update
 
 interface UpdateEventResponseBody extends BaseResponseBody {}
 
-interface UpdateEventResponseLocals extends BaseLocals {
-    email: string;
-    username: string;
-    isVerified: string;
-}
+interface UpdateEventResponseLocals extends BaseLocals {}
 
 export { UpdateEventResponse, UpdateEventResponseLocals };
