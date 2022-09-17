@@ -340,7 +340,6 @@ class EventService implements BaseService {
                 'event_creator.firstName',
                 'event_creator.lastName',
             ])
-            .leftJoin('event.categories', 'categories')
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
@@ -371,7 +370,22 @@ class EventService implements BaseService {
         const eventJoinedIDs = eventsJoined.eventJoined.map((cc: Event) => cc.eventID);
 
         const eventsNotJoined = await eventQueryBuilder
-            .leftJoinAndSelect('event.participants', 'user')
+            .select([
+                'event.eventID',
+                'event.eventName',
+                'event.date',
+                'event.longitude',
+                'event.latitude',
+                'event.locationName',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'event_creator.username',
+                'event_creator.firstName',
+                'event_creator.lastName',
+            ])
+            .leftJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.location', 'location')
             .where('event.eventID NOT IN (:...eventIDs)', { eventIDs: [-1, ...eventJoinedIDs] })
             .getMany();
         return eventsNotJoined as Event[];
