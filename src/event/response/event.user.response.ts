@@ -5,10 +5,6 @@ interface EventUserResponse<ResBody = EventUserResponseBody, Locals = EventUserR
 
 interface EventUserResponseBody extends BaseResponseBody {}
 
-interface EventUserResponseLocals extends BaseLocals {
-    email: string;
-    username: string;
-    isVerified: string;
-}
+interface EventUserResponseLocals extends BaseLocals {}
 
 export { EventUserResponse, EventUserResponseLocals };

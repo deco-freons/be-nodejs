@@ -7,7 +7,11 @@ interface BaseResponseBody {
     requestTime?: number;
 }
 
-interface BaseLocals extends Record<string, any> {}
+interface BaseLocals extends Record<string, any> {
+    email: string;
+    username: string;
+    isVerified: boolean;
+}
 
 interface BaseResponse<ResBody = BaseResponseBody, Locals = BaseLocals> extends Response<ResBody, Locals> {}
 

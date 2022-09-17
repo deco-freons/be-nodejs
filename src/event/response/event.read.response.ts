@@ -8,10 +8,6 @@ interface ReadEventResponseBody extends BaseResponseBody {
     events: Partial<EventDetails>[];
 }
 
-interface ReadEventResponseLocals extends BaseLocals {
-    email: string;
-    username: string;
-    isVerified: string;
-}
+interface ReadEventResponseLocals extends BaseLocals {}
 
 export { ReadEventResponse, ReadEventResponseLocals };
