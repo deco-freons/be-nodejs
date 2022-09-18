@@ -300,8 +300,8 @@ class EventService implements BaseService {
             const eventID = Number(body.eventID);
             const event = await this.getEventByEventID(eventID);
             if (!event) throw new NotFoundException('Event does not exist.');
-            if (event.eventCreator.username == username)
-                throw new ForbiddenException('You are not allowed to take this action at your own event.');
+            if (event.eventCreator.username != username)
+                throw new ForbiddenException('You are not allowed to take this action at this event.');
 
             const imageData = this.constructImageData(file);
             const image = await this.createEventImage(imageData);
@@ -398,9 +398,11 @@ class EventService implements BaseService {
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
+                'event_image.imageUrl',
             ])
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
+            .leftJoin('event.eventImage', 'event_image')
             .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
             .getMany();
         return events as Event[];
@@ -416,12 +418,6 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
         return participants as User[];
-    };
-
-    private getEventImage = async (event: Event) => {
-        const queryBuilder = this.eventRepository.createQueryBuilder();
-        const image = await queryBuilder.relation(Event, 'eventImage').of(event).loadOne();
-        return image as Image;
     };
 
     private getUserNotJoinedEvents = async (userID: number) => {
@@ -475,10 +471,12 @@ class EventService implements BaseService {
                 'event.startTime',
                 'event.endTime',
                 'event_creator.username',
+                'event_image.imageUrl',
             ])
             .innerJoin('event.categories', 'categories')
             .innerJoin('event.eventCreator', 'event_creator')
             .innerJoin('event.location', 'location')
+            .innerJoin('event.eventImage', 'event_image')
             .getMany();
         return events as Event[];
     };
@@ -654,6 +652,7 @@ class EventService implements BaseService {
             latitude: event.latitude,
             location: location,
             locationName: event.locationName,
+            eventImage: event.eventImage,
             eventCreator: event.eventCreator,
             participants: participants.length,
         };
@@ -727,6 +726,7 @@ class EventService implements BaseService {
             locationName: event.locationName,
             shortDescription: event.shortDescription,
             description: event.description,
+            eventImage: event.eventImage,
             eventCreator: event.eventCreator,
             participants: participants.length,
             participantsList: participants,
