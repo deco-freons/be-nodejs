@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 
 import BaseController from '../../common/controller/base.controller';
 import authorizationMiddleware from '../../common/middleware/authorization.middleware';
+import imageUploadMiddleware from '../../common/middleware/imageUpload.middleware';
 import validationMiddleware from '../../common/middleware/validation.middleware';
 import { RequestTypes } from '../../common/enum/request.enum';
 
@@ -15,12 +16,15 @@ import UpdateUserDTO from '../dto/user.update.dto';
 import UpdateUserRequest from '../request/user.update.request';
 import UserLongLatDTO from '../dto/user.longlat.dto';
 import UserEventsRequest from '../request/user.events.request';
+import ReadOtherUserRequest from '../request/user.others.request';
+import UserImageDTO from '../dto/user.image.dto';
+import UserImageRequest from '../request/user.image.request';
 import { UpsertUserPreferenceResponse } from '../response/userPreference.upsert.response';
 import { ReadUserResponse } from '../response/user.read.response';
 import { UpdateUserResponse } from '../response/user.update.response';
 import { UserEventsResponse } from '../response/user.events.response';
-import ReadOtherUserRequest from '../request/user.others.request';
 import { ReadOtherUserResponse } from '../response/user.others.response';
+import { UserImageResponse } from '../response/user.image.response';
 
 class UserController implements BaseController {
     path: string;
@@ -55,6 +59,15 @@ class UserController implements BaseController {
             '/events',
             [authorizationMiddleware, validationMiddleware(UserLongLatDTO, RequestTypes.BODY)],
             this.readEventsByUserHandler,
+        );
+        this.router.post(
+            '/image',
+            [
+                authorizationMiddleware,
+                imageUploadMiddleware.single('userImage'),
+                validationMiddleware(UserImageDTO, RequestTypes.BODY),
+            ],
+            this.uploadUserImageHandler,
         );
     }
 
@@ -122,6 +135,24 @@ class UserController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.readEventsByUser(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private uploadUserImageHandler = async (
+        request: UserImageRequest,
+        response: UserImageResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const files = request.file as Express.MulterS3.File;
+            const locals = response.locals;
+
+            console.log(request.file);
+
+            const serviceResponse = await this.service.uploadUserImage(files, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message });
         } catch (error) {
             next(error);
         }

@@ -7,6 +7,7 @@ import NotFoundException from '../../common/exception/notFound.exception';
 import User from '../../auth/entity/user.entity';
 import Event from '../../event/entity/event.entity';
 import EventDetails from '../../event/entity/event.details.entity';
+import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
 import UserDTO from '../../auth/dto/user.dto';
 
@@ -19,18 +20,21 @@ import { UpsertUserPreferenceResponseLocals } from '../response/userPreference.u
 import { ReadUserResponseLocals } from '../response/user.read.response';
 import { UpdateUserResponseLocals } from '../response/user.update.response';
 import { UserEventsResponseLocals } from '../response/user.events.response';
+import { UserImageResponseLocals } from '../response/user.image.response';
 
 class UserService implements BaseService {
     userRepository: Repository<ObjectLiteral>;
     preferenceRepository: Repository<ObjectLiteral>;
     eventRepository: Repository<ObjectLiteral>;
     locationRepository: Repository<ObjectLiteral>;
+    imageRepository: Repository<ObjectLiteral>;
 
     constructor(database: DataSource) {
         this.userRepository = database.getRepository(User);
         this.preferenceRepository = database.getRepository(Preference);
         this.eventRepository = database.getRepository(Event);
         this.locationRepository = database.getRepository(Location);
+        this.imageRepository = database.getRepository(Image);
     }
 
     public upsertUserPreference = async (body: UserPreferenceDTO, locals: UpsertUserPreferenceResponseLocals) => {
@@ -147,21 +151,33 @@ class UserService implements BaseService {
         }
     };
 
-    private constructUserData = (user: User, preferences: Preference[], location: Partial<Location>) => {
-        const userData: Partial<UserDTO> = {
-            userID: user.userID,
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            birthDate: user.birthDate,
-            location: location,
-            preferences: preferences,
-            isVerified: user.isVerified,
-            isFirstLogin: user.isFirstLogin,
-            isShareLocation: user.isShareLocation,
-        };
-        return userData;
+    public uploadUserImage = async (file: Express.MulterS3.File, locals: UserImageResponseLocals) => {
+        try {
+            const username = locals.username;
+            const email = locals.email;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const imageData = this.constructImageData(file);
+            const image = await this.createUserImage(imageData);
+            await this.updateUserImage(user, image);
+
+            return { message: 'Successfully upload user image ' };
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    private createUserImage = async (imageData: Partial<Image>) => {
+        const imageQueryBuilder = this.imageRepository.createQueryBuilder();
+        const eventImageInsertResult = await imageQueryBuilder
+            .insert()
+            .into(Image)
+            .values(imageData)
+            .returning('*')
+            .execute();
+        const eventImage = eventImageInsertResult.generatedMaps[0] as Image;
+        return eventImage;
     };
 
     private getUserByEmailAndUsername = async (email: string, username: string) => {
@@ -270,6 +286,34 @@ class UserService implements BaseService {
             .execute();
     };
 
+    private updateUserImage = async (user: User, image: Image) => {
+        const queryBuilder = this.userRepository.createQueryBuilder();
+        if (user.userImage) await this.deleteEventImageByImageID(user.userImage.imageID);
+        await queryBuilder.relation(User, 'userImage').of(user).set(image);
+    };
+
+    private deleteEventImageByImageID = async (imageID: string) => {
+        const queryBuilder = this.imageRepository.createQueryBuilder();
+        await queryBuilder.delete().from(Image).where('imageID = :imageID', { imageID: imageID }).execute();
+    };
+
+    private constructUserData = (user: User, preferences: Preference[], location: Partial<Location>) => {
+        const userData: Partial<UserDTO> = {
+            userID: user.userID,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            birthDate: user.birthDate,
+            location: location,
+            preferences: preferences,
+            isVerified: user.isVerified,
+            isFirstLogin: user.isFirstLogin,
+            isShareLocation: user.isShareLocation,
+        };
+        return userData;
+    };
+
     private constructEventsByUser = (events: Event[], longitude: number, latitude: number) => {
         const eventsByUserWithinRadius = events
             .map((event) => this.constructEventsData(event, longitude, latitude))
@@ -306,6 +350,14 @@ class UserService implements BaseService {
         const userData = this.constructUserData(user, preferences, location);
         userData.eventCreated = events;
         return userData;
+    };
+
+    private constructImageData = (image: Express.MulterS3.File) => {
+        const imageData: Partial<Image> = {
+            imageID: image.key,
+            imageUrl: image.location,
+        };
+        return imageData;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {

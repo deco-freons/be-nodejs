@@ -307,7 +307,7 @@ class EventService implements BaseService {
             const image = await this.createEventImage(imageData);
             await this.updateEventImage(event, image);
 
-            return { message: 'Successfully upload event image ' };
+            return { message: 'Successfully upload event image.' };
         } catch (error) {
             throw error;
         }
