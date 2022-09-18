@@ -24,7 +24,7 @@ import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
-import UploadEventImageDTO from '../dto/event.image.dto';
+import EventImageDTO from '../dto/event.image.dto';
 import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
@@ -32,7 +32,7 @@ import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
 import { EventUserResponseLocals } from '../response/event.user.response';
 import { ReadEventResponseLocals } from '../response/event.read.response';
-import { UploadEventImageResponseLocals } from '../response/event.image.response';
+import { EventImageResponseLocals } from '../response/event.image.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -287,9 +287,9 @@ class EventService implements BaseService {
     };
 
     public uploadEventImage = async (
-        body: UploadEventImageDTO,
+        body: EventImageDTO,
         file: Express.MulterS3.File,
-        locals: UploadEventImageResponseLocals,
+        locals: EventImageResponseLocals,
     ) => {
         try {
             const email = locals.email;

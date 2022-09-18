@@ -1,10 +1,10 @@
 import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/response/base.response';
 
-interface UploadEventImageResponse<ResBody = UploadEventImageResponseBody, Locals = UploadEventImageResponseLocals>
+interface EventImageResponse<ResBody = EventImageResponseBody, Locals = EventImageResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
-interface UploadEventImageResponseBody extends BaseResponseBody {}
+interface EventImageResponseBody extends BaseResponseBody {}
 
-interface UploadEventImageResponseLocals extends BaseLocals {}
+interface EventImageResponseLocals extends BaseLocals {}
 
-export { UploadEventImageResponse, UploadEventImageResponseLocals };
+export { EventImageResponse, EventImageResponseLocals };
