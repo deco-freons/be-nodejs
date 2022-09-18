@@ -203,6 +203,7 @@ class EventService implements BaseService {
                 throw new ForbiddenException(`You are unauthorized to delete ${event.eventName} event.`);
 
             await this.deleteEventByEventID(eventID);
+            if (event.eventImage) await this.deleteEventImageByImageID(event.eventImage.imageID);
 
             await this.index.deleteObject(eventID.toString());
 
@@ -365,8 +366,17 @@ class EventService implements BaseService {
             .leftJoinAndSelect('event.categories', 'categories')
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
-            .addSelect(['location.locationID', 'location.suburb', 'location.city', 'location.state'])
-            .addSelect(['event_creator.firstName', 'event_creator.lastName', 'event_creator.username'])
+            .leftJoin('event.eventImage', 'event_image')
+            .addSelect([
+                'location.locationID',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'event_creator.firstName',
+                'event_creator.lastName',
+                'event_creator.username',
+                'event_image.imageID',
+            ])
             .where('event.eventID = :eventID', { eventID: eventID })
             .getOne();
         return event as Event;
@@ -565,10 +575,8 @@ class EventService implements BaseService {
 
     private updateEventImage = async (event: Event, image: Image) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
-        const oldImage = await this.getEventImage(event);
-
-        if (oldImage) await this.deleteEventImageByImageID(oldImage.imageID);
-        await queryBuilder.relation(Event, 'eventImage').of(event).set(image ?? null);
+        if (event.eventImage) await this.deleteEventImageByImageID(event.eventImage.imageID);
+        await queryBuilder.relation(Event, 'eventImage').of(event).set(image);
     };
 
     private deleteEventByEventID = async (eventID: number) => {

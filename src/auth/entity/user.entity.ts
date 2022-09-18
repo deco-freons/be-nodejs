@@ -64,10 +64,10 @@ class User {
     })
     preferences: Preference[];
 
-    @OneToMany(() => Event, (event) => event.eventCreator, { onUpdate: 'CASCADE' })
+    @OneToMany(() => Event, (event) => event.eventCreator, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     eventCreated: Event[];
 
-    @ManyToMany(() => Event, (event) => event.participants, { onUpdate: 'CASCADE' })
+    @ManyToMany(() => Event, (event) => event.participants, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinTable({
         name: 'user_joined_event',
         joinColumn: {

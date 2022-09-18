@@ -69,7 +69,7 @@ class Event {
     @JoinColumn({ name: 'event_creator', referencedColumnName: 'userID' })
     eventCreator: User;
 
-    @ManyToMany(() => User, (user) => user.eventJoined, { onUpdate: 'SET NULL' })
+    @ManyToMany(() => User, (user) => user.eventJoined, { onDelete: 'CASCADE', onUpdate: 'SET NULL' })
     participants: User[];
 
     @OneToOne(() => Image, (image) => image.imageID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
