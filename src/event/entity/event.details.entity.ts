@@ -2,6 +2,7 @@ import User from '../../auth/entity/user.entity';
 import UserDTO from '../../auth/dto/user.dto';
 import Preference from '../../user/entity/preference.entity';
 import Location from '../../location/entity/location.entity';
+import Image from '../../image/entity/image.entity';
 
 class EventDetails {
     eventID: number;
@@ -17,6 +18,7 @@ class EventDetails {
     distance?: number;
     shortDescription: string;
     description: string;
+    eventImage: Partial<Image>;
     eventCreator: User;
     participants: number;
     participantsList: Partial<UserDTO>[];

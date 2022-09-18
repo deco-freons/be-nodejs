@@ -4,6 +4,7 @@ import pinoLogger from '../logger/pino.logger';
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
 import Event from '../../event/entity/event.entity';
+import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
 
 class PostgreSQLDatabase {
@@ -24,7 +25,7 @@ class PostgreSQLDatabase {
             database: process.env.DB_NAME,
             synchronize: true,
             logging: false,
-            entities: [User, Preference, Event, Location],
+            entities: [User, Preference, Event, Location, Image],
             migrations: [],
             subscribers: [],
         });
