@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 
 import BaseController from '../../common/controller/base.controller';
 import authorizationMiddleware from '../../common/middleware/authorization.middleware';
+import imageUploadMiddleware from '../../common/middleware/imageUpload.middleware';
 import validationMiddleware from '../../common/middleware/validation.middleware';
 import { RequestTypes } from '../../common/enum/request.enum';
 
@@ -17,6 +18,8 @@ import DeleteEventDTO from '../dto/event.delete.dto';
 import DeleteEventRequest from '../request/event.delete.request';
 import EventUserDTO from '../dto/event.user.dto';
 import EventUserRequest from '../request/event.user.request';
+import UploadEventImageDTO from '../dto/event.image.dto';
+import UploadEventImageRequest from '../request/event.image.request';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { ReadEventResponse } from '../response/event.read.response';
 import { CreateEventResponse } from '../response/event.create.response';
@@ -25,6 +28,7 @@ import { ReadEventDetailsResponse } from '../response/event.readDetails.response
 import { UpdateEventResponse } from '../response/event.update.response';
 import { DeleteEventResponse } from '../response/event.delete.response';
 import { EventUserResponse } from '../response/event.user.response';
+import { UploadEventImageResponse } from '../response/event.image.response';
 
 class EventController implements BaseController {
     path: string;
@@ -87,6 +91,15 @@ class EventController implements BaseController {
             ],
             this.readHaveNotYetJoinedEventsHandler,
         );
+        this.router.post(
+            '/image/upload',
+            [
+                authorizationMiddleware,
+                imageUploadMiddleware.single('eventImage'),
+                validationMiddleware(UploadEventImageDTO, RequestTypes.BODY),
+            ],
+            this.uploadEventImageHandler,
+        );
         this.router.post('/algolia', [authorizationMiddleware], this.saveToAlgoliaHandler);
     }
 
@@ -99,7 +112,11 @@ class EventController implements BaseController {
             const body = request.body;
             const locals = response.locals;
             const serviceResponse = await this.service.createEvent(body, locals);
-            return response.send({ statusCode: 200, message: serviceResponse.message });
+            return response.send({
+                statusCode: 200,
+                message: serviceResponse.message,
+                eventID: serviceResponse.eventID,
+            });
         } catch (error) {
             next(error);
         }
@@ -199,6 +216,23 @@ class EventController implements BaseController {
             const query = request.query;
             const serviceResponse = await this.service.readHaveNotYetJoinedEvents(body, locals, query);
             return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private uploadEventImageHandler = async (
+        request: UploadEventImageRequest,
+        response: UploadEventImageResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const files = request.file as Express.MulterS3.File;
+            const locals = response.locals;
+
+            const serviceResponse = await this.service.uploadEventImage(body, files, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message });
         } catch (error) {
             next(error);
         }

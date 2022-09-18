@@ -6,12 +6,14 @@ import {
     JoinTable,
     ManyToMany,
     ManyToOne,
+    OneToOne,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 import User from '../../auth/entity/user.entity';
-import Preference from '../../user/entity/preference.entity';
+import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
+import Preference from '../../user/entity/preference.entity';
 
 @Entity()
 class Event {
@@ -21,7 +23,7 @@ class Event {
     @Column({ name: 'event_name' })
     eventName: string;
 
-    @ManyToMany(() => Preference, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany(() => Preference, { onUpdate: 'CASCADE' })
     @JoinTable({
         name: 'event_categories',
         joinColumn: {
@@ -50,7 +52,7 @@ class Event {
     @Column({ name: 'latitude', type: 'float' })
     latitude: number;
 
-    @ManyToOne(() => Location, (location) => location.locationID, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Location, (location) => location.locationID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'location' })
     location: Location;
 
@@ -67,8 +69,12 @@ class Event {
     @JoinColumn({ name: 'event_creator', referencedColumnName: 'userID' })
     eventCreator: User;
 
-    @ManyToMany(() => User, (user) => user.eventJoined, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany(() => User, (user) => user.eventJoined, { onUpdate: 'SET NULL' })
     participants: User[];
+
+    @OneToOne(() => Image, (image) => image.imageID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @JoinColumn({ name: 'event_image', referencedColumnName: 'imageID' })
+    eventImage: Image;
 
     @CreateDateColumn({ name: 'created_at', select: false })
     createdAt: Date;

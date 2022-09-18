@@ -37,7 +37,7 @@ class User {
     @Column({ name: 'birth_date', type: 'date' })
     birthDate: string;
 
-    @ManyToOne(() => Location, (location) => location.locationID, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToOne(() => Location, (location) => location.locationID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'location' })
     location: Location;
 
@@ -50,7 +50,7 @@ class User {
     @Column({ name: 'is_share_location', default: false })
     isShareLocation: boolean;
 
-    @ManyToMany(() => Preference, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany(() => Preference, { onUpdate: 'CASCADE' })
     @JoinTable({
         name: 'user_preferences',
         joinColumn: {
@@ -64,10 +64,10 @@ class User {
     })
     preferences: Preference[];
 
-    @OneToMany(() => Event, (event) => event.eventCreator, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @OneToMany(() => Event, (event) => event.eventCreator, { onUpdate: 'CASCADE' })
     eventCreated: Event[];
 
-    @ManyToMany(() => Event, (event) => event.participants, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
+    @ManyToMany(() => Event, (event) => event.participants, { onUpdate: 'CASCADE' })
     @JoinTable({
         name: 'user_joined_event',
         joinColumn: {

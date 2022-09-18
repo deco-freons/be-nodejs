@@ -3,7 +3,9 @@ import { BaseResponse, BaseResponseBody, BaseLocals } from '../../common/respons
 interface CreateEventResponse<ResBody = CreateEventResponseBody, Locals = CreateEventResponseLocals>
     extends BaseResponse<ResBody, Locals> {}
 
-interface CreateEventResponseBody extends BaseResponseBody {}
+interface CreateEventResponseBody extends BaseResponseBody {
+    eventID: number;
+}
 
 interface CreateEventResponseLocals extends BaseLocals {}
 

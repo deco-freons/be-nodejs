@@ -23,6 +23,7 @@ import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
+import UploadEventImageDTO from '../dto/event.image.dto';
 import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
@@ -30,12 +31,15 @@ import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
 import { EventUserResponseLocals } from '../response/event.user.response';
 import { ReadEventResponseLocals } from '../response/event.read.response';
+import Image from '../../image/entity/image.entity';
+import { UploadEventImageResponseLocals } from '../response/event.image.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
     userRepository: Repository<ObjectLiteral>;
     categoryRepository: Repository<ObjectLiteral>;
     locationRepository: Repository<ObjectLiteral>;
+    imageRepository: Repository<ObjectLiteral>;
     algolia: SearchClient;
     index: SearchIndex;
 
@@ -44,6 +48,7 @@ class EventService implements BaseService {
         this.userRepository = database.getRepository(User);
         this.categoryRepository = database.getRepository(Preference);
         this.locationRepository = database.getRepository(Location);
+        this.imageRepository = database.getRepository(Image);
 
         this.algolia = Algolia;
         this.index = this.algolia.initIndex('event');
@@ -90,7 +95,7 @@ class EventService implements BaseService {
             const data = this.constructAlgoliaData(event.eventID, event, location, user, categories);
             await this.index.saveObject(data);
 
-            return { message: `Successfully create ${event.eventName} event.` };
+            return { message: `Successfully create ${event.eventName} event.`, eventID: event.eventID };
         } catch (error) {
             throw error;
         }
@@ -275,8 +280,35 @@ class EventService implements BaseService {
                 message: 'Successfully retrieve not joined events.',
                 events: sortedAndFilteredEvents.slice(begin, end),
             };
-        } catch (e) {
-            throw e;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    public uploadEventImage = async (
+        body: UploadEventImageDTO,
+        file: Express.MulterS3.File,
+        locals: UploadEventImageResponseLocals,
+    ) => {
+        try {
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventID = Number(body.eventID);
+            const event = await this.getEventByEventID(eventID);
+            if (!event) throw new NotFoundException('Event does not exist.');
+            if (event.eventCreator.username == username)
+                throw new ForbiddenException('You are not allowed to take this action at your own event.');
+
+            const imageData = this.constructImageData(file);
+            const image = await this.createEventImage(imageData);
+            await this.updateEventImage(event, image);
+
+            return { message: 'Successfully upload event image ' };
+        } catch (error) {
+            throw error;
         }
     };
 
@@ -289,8 +321,8 @@ class EventService implements BaseService {
             });
 
             return { message: 'Success import data to algolia' };
-        } catch (e) {
-            throw e;
+        } catch (error) {
+            throw error;
         }
     };
 
@@ -308,6 +340,18 @@ class EventService implements BaseService {
         } catch (error) {
             throw new ConflictException(`You already joined the ${event.eventName} event.`);
         }
+    };
+
+    private createEventImage = async (imageData: Partial<Image>) => {
+        const imageQueryBuilder = this.imageRepository.createQueryBuilder();
+        const eventImageInsertResult = await imageQueryBuilder
+            .insert()
+            .into(Image)
+            .values(imageData)
+            .returning('*')
+            .execute();
+        const eventImage = eventImageInsertResult.generatedMaps[0] as Image;
+        return eventImage;
     };
 
     private cancelEventJoinedByUser = async (user: User, event: Event) => {
@@ -364,6 +408,12 @@ class EventService implements BaseService {
         return participants as User[];
     };
 
+    private getEventImage = async (event: Event) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        const image = await queryBuilder.relation(Event, 'eventImage').of(event).loadOne();
+        return image as Image;
+    };
+
     private getUserNotJoinedEvents = async (userID: number) => {
         const eventQueryBuilder = this.eventRepository.createQueryBuilder('event');
         const userQueryBuilder = this.userRepository.createQueryBuilder('user');
@@ -394,6 +444,33 @@ class EventService implements BaseService {
             .where('event.eventID NOT IN (:...eventIDs)', { eventIDs: [-1, ...eventJoinedIDs] })
             .getMany();
         return eventsNotJoined as Event[];
+    };
+
+    private getEvents = async () => {
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
+        const events = await queryBuilder
+            .select([
+                'event.eventID',
+                'event.eventName',
+                'event.shortDescription',
+                'event.description',
+                'categories.preferenceID',
+                'event.locationName',
+                'location.locationID',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'location.country',
+                'event.date',
+                'event.startTime',
+                'event.endTime',
+                'event_creator.username',
+            ])
+            .innerJoin('event.categories', 'categories')
+            .innerJoin('event.eventCreator', 'event_creator')
+            .innerJoin('event.location', 'location')
+            .getMany();
+        return events as Event[];
     };
 
     private getAllCategoriesID = async () => {
@@ -486,9 +563,22 @@ class EventService implements BaseService {
         await queryBuilder.relation(Event, 'categories').of(event).addAndRemove(categories, oldCategories);
     };
 
+    private updateEventImage = async (event: Event, image: Image) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        const oldImage = await this.getEventImage(event);
+
+        if (oldImage) await this.deleteEventImageByImageID(oldImage.imageID);
+        await queryBuilder.relation(Event, 'eventImage').of(event).set(image ?? null);
+    };
+
     private deleteEventByEventID = async (eventID: number) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder.delete().from(Event).where('eventID = :eventID', { eventID: eventID }).execute();
+    };
+
+    private deleteEventImageByImageID = async (imageID: string) => {
+        const queryBuilder = this.imageRepository.createQueryBuilder();
+        await queryBuilder.delete().from(Image).where('imageID = :imageID', { imageID: imageID }).execute();
     };
 
     private filterEvents = (events: Partial<EventDetails>[], filter: FilterEventDTO, todaysDate: Date) => {
@@ -562,33 +652,6 @@ class EventService implements BaseService {
         return eventData;
     };
 
-    private getEvents = async () => {
-        const queryBuilder = this.eventRepository.createQueryBuilder('event');
-        const events = await queryBuilder
-            .select([
-                'event.eventID',
-                'event.eventName',
-                'event.shortDescription',
-                'event.description',
-                'categories.preferenceID',
-                'event.locationName',
-                'location.locationID',
-                'location.suburb',
-                'location.city',
-                'location.state',
-                'location.country',
-                'event.date',
-                'event.startTime',
-                'event.endTime',
-                'event_creator.username',
-            ])
-            .innerJoin('event.categories', 'categories')
-            .innerJoin('event.eventCreator', 'event_creator')
-            .innerJoin('event.location', 'location')
-            .getMany();
-        return events as Event[];
-    };
-
     private constructSaveAlgoliaData = (event: Event) => {
         const data = {
             objectID: event.eventID,
@@ -635,46 +698,6 @@ class EventService implements BaseService {
             eventCreator: creator.username,
         };
         return data;
-    };
-
-    private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
-        const from = { longitude: longitude, latitude: latitude };
-        const to = { longitude: event.longitude, latitude: event.latitude };
-        const distance = parseFloat((getDistance(from, to) / 1000).toFixed(1));
-        return distance;
-    };
-
-    private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number, isMoreOrLess: string) => {
-        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.distance >= radius;
-        return event.distance <= radius;
-    };
-
-    private filterEventsWithinDays = (
-        event: Partial<EventDetails>,
-        daysToEvent: number,
-        todaysDate: Date,
-        isMoreOrLess: string,
-    ) => {
-        const eventDate = new Date(event.date);
-        const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
-        const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
-        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return difference >= daysToEventInSeconds;
-        return difference >= 0 && difference <= daysToEventInSeconds;
-    };
-
-    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
-        if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.distance < event2.distance ? 1 : -1;
-        return event1.distance > event2.distance ? 1 : -1;
-    };
-
-    private sortEventsByPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
-        if (sort.isMoreOrLess == LOGICAL_OPERATION.LESS) return event1.participants > event2.participants ? 1 : -1;
-        return event1.participants < event2.participants ? 1 : -1;
-    };
-
-    private sortEventsByDays = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
-        if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.date < event2.date ? 1 : -1;
-        return event1.date > event2.date ? 1 : -1;
     };
 
     private constructEventDetailsData = async (
@@ -746,6 +769,54 @@ class EventService implements BaseService {
             state: location.state,
         };
         return locationData;
+    };
+
+    private constructImageData = (image: Express.MulterS3.File) => {
+        const imageData: Partial<Image> = {
+            imageID: image.key,
+            imageUrl: image.location,
+        };
+        return imageData;
+    };
+
+    private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
+        const from = { longitude: longitude, latitude: latitude };
+        const to = { longitude: event.longitude, latitude: event.latitude };
+        const distance = parseFloat((getDistance(from, to) / 1000).toFixed(1));
+        return distance;
+    };
+
+    private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number, isMoreOrLess: string) => {
+        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return event.distance <= radius;
+        return event.distance >= radius;
+    };
+
+    private filterEventsWithinDays = (
+        event: Partial<EventDetails>,
+        daysToEvent: number,
+        todaysDate: Date,
+        isMoreOrLess: string,
+    ) => {
+        const eventDate = new Date(event.date);
+        const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
+        const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
+        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return difference >= 0 && difference <= daysToEventInSeconds;
+        return difference >= daysToEventInSeconds;
+    };
+
+    private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
+        if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.distance < event2.distance ? 1 : -1;
+        return event1.distance > event2.distance ? 1 : -1;
+    };
+
+    private sortEventsByPopularity = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
+        if (sort.isMoreOrLess == LOGICAL_OPERATION.LESS) return event1.participants > event2.participants ? 1 : -1;
+        return event1.participants < event2.participants ? 1 : -1;
+    };
+
+    private sortEventsByDays = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
+        if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.date < event2.date ? 1 : -1;
+        return event1.date > event2.date ? 1 : -1;
     };
 
     private getParticipated = (participants: User[], username: string) => {
