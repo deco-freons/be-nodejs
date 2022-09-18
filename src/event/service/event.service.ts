@@ -258,6 +258,7 @@ class EventService implements BaseService {
 
             const longitude = body.longitude;
             const latitude = body.latitude;
+            const filter = body.filter;
             const sort = body.sort;
 
             const email = locals.email;
@@ -267,9 +268,13 @@ class EventService implements BaseService {
 
             const eventsNotJoined = await this.getUserNotJoinedEvents(user.userID);
             const eventsData = await this.constructEventsData(eventsNotJoined, longitude, latitude);
-            const sortedEvents = this.sortEvents(eventsData, sort);
+            const filteredEvents = this.filterEvents(eventsData, filter, undefined);
+            const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
 
-            return { message: 'Successfully retrieve not joined events.', events: sortedEvents.slice(begin, end) };
+            return {
+                message: 'Successfully retrieve not joined events.',
+                events: sortedAndFilteredEvents.slice(begin, end),
+            };
         } catch (e) {
             throw e;
         }
@@ -640,8 +645,8 @@ class EventService implements BaseService {
     };
 
     private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number, isMoreOrLess: string) => {
-        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return event.distance <= radius;
-        return event.distance >= radius;
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.distance >= radius;
+        return event.distance <= radius;
     };
 
     private filterEventsWithinDays = (
@@ -653,8 +658,8 @@ class EventService implements BaseService {
         const eventDate = new Date(event.date);
         const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
         const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
-        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return difference >= 0 && difference <= daysToEventInSeconds;
-        return difference >= daysToEventInSeconds;
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return difference >= daysToEventInSeconds;
+        return difference >= 0 && difference <= daysToEventInSeconds;
     };
 
     private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
