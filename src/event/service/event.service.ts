@@ -13,6 +13,7 @@ import { LOGICAL_OPERATION, SORT_BY, UNIX } from '../../common/enum/event.enum';
 import User from '../../auth/entity/user.entity';
 import Preference from '../../user/entity/preference.entity';
 import Location from '../../location/entity/location.entity';
+import Image from '../../image/entity/image.entity';
 import UserDTO from '../../auth/dto/user.dto';
 
 import Event from '../entity/event.entity';
@@ -31,7 +32,6 @@ import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
 import { EventUserResponseLocals } from '../response/event.user.response';
 import { ReadEventResponseLocals } from '../response/event.read.response';
-import Image from '../../image/entity/image.entity';
 import { UploadEventImageResponseLocals } from '../response/event.image.response';
 
 class EventService implements BaseService {
