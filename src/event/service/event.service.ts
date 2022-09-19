@@ -375,7 +375,7 @@ class EventService implements BaseService {
                 'event_creator.firstName',
                 'event_creator.lastName',
                 'event_creator.username',
-                'event_image.imageID',
+                'event_image.imageUrl',
             ])
             .where('event.eventID = :eventID', { eventID: eventID })
             .getOne();

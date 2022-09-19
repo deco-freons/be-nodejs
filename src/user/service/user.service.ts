@@ -9,9 +9,9 @@ import Event from '../../event/entity/event.entity';
 import EventDetails from '../../event/entity/event.details.entity';
 import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
-import UserDTO from '../../auth/dto/user.dto';
 
 import Preference from '../entity/preference.entity';
+import UserDetails from '../entity/user.details.entity';
 import UserPreferenceDTO from '../dto/user.preference.dto';
 import UpdateUserDTO from '../dto/user.update.dto';
 import UserLongLatDTO from '../dto/user.longlat.dto';
@@ -191,11 +191,11 @@ class UserService implements BaseService {
                 'user.email',
                 'user.birthDate',
                 'location.suburb',
-                'user.isVerified',
-                'user.isFirstLogin',
+                'user_image.imageUrl',
                 'user.isShareLocation',
             ])
             .leftJoin('user.location', 'location')
+            .leftJoin('user.userImage', 'user_image')
             .where('user.email = :email', { email: email })
             .andWhere('user.username = :username', { username: username })
             .getOne();
@@ -211,9 +211,11 @@ class UserService implements BaseService {
                 'user.firstName',
                 'user.lastName',
                 'location.suburb',
+                'user_image.imageUrl',
                 'user.isShareLocation',
             ])
             .leftJoin('user.location', 'location')
+            .leftJoin('user.userImage', 'user_image')
             .where('user.userID = :userID', { userID: userID })
             .getOne();
         return user as User;
@@ -230,9 +232,11 @@ class UserService implements BaseService {
                 'event.latitude',
                 'categories.preferenceID',
                 'categories.preferenceName',
+                'event_image.imageUrl',
             ])
             .leftJoin('event.categories', 'categories')
             .leftJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.eventImage', 'event_image')
             .where('event.eventCreator = :userID', { userID: userID })
             .getMany();
         return events as Event[];
@@ -298,7 +302,7 @@ class UserService implements BaseService {
     };
 
     private constructUserData = (user: User, preferences: Preference[], location: Partial<Location>) => {
-        const userData: Partial<UserDTO> = {
+        const userData: Partial<UserDetails> = {
             userID: user.userID,
             username: user.username,
             firstName: user.firstName,
@@ -307,8 +311,7 @@ class UserService implements BaseService {
             birthDate: user.birthDate,
             location: location,
             preferences: preferences,
-            isVerified: user.isVerified,
-            isFirstLogin: user.isFirstLogin,
+            userImage: user.userImage,
             isShareLocation: user.isShareLocation,
         };
         return userData;
@@ -330,6 +333,7 @@ class UserService implements BaseService {
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
+            eventImage: event.eventImage,
         };
         return eventData;
     };
