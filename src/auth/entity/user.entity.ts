@@ -7,12 +7,14 @@ import {
     ManyToMany,
     ManyToOne,
     OneToMany,
+    OneToOne,
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
 import Preference from '../../user/entity/preference.entity';
 import Event from '../../event/entity/event.entity';
 import Location from '../../location/entity/location.entity';
+import Image from '../../image/entity/image.entity';
 
 @Entity()
 class User {
@@ -40,6 +42,10 @@ class User {
     @ManyToOne(() => Location, (location) => location.locationID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'location' })
     location: Location;
+
+    @OneToOne(() => Image, (image) => image.imageID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @JoinColumn({ name: 'user_image', referencedColumnName: 'imageID' })
+    userImage: Image;
 
     @Column({ name: 'is_verified', default: false })
     isVerified: boolean;

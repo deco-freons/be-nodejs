@@ -1,10 +1,10 @@
 import { IsNumberString } from 'class-validator';
 
-class UploadEventImageDTO {
+class EventImageDTO {
     @IsNumberString()
     eventID: string;
 
     eventImage: string;
 }
 
-export default UploadEventImageDTO;
+export default EventImageDTO;

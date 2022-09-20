@@ -18,8 +18,8 @@ import DeleteEventDTO from '../dto/event.delete.dto';
 import DeleteEventRequest from '../request/event.delete.request';
 import EventUserDTO from '../dto/event.user.dto';
 import EventUserRequest from '../request/event.user.request';
-import UploadEventImageDTO from '../dto/event.image.dto';
-import UploadEventImageRequest from '../request/event.image.request';
+import EventImageDTO from '../dto/event.image.dto';
+import EventImageRequest from '../request/event.image.request';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { ReadEventResponse } from '../response/event.read.response';
 import { CreateEventResponse } from '../response/event.create.response';
@@ -28,7 +28,7 @@ import { ReadEventDetailsResponse } from '../response/event.readDetails.response
 import { UpdateEventResponse } from '../response/event.update.response';
 import { DeleteEventResponse } from '../response/event.delete.response';
 import { EventUserResponse } from '../response/event.user.response';
-import { UploadEventImageResponse } from '../response/event.image.response';
+import { EventImageResponse } from '../response/event.image.response';
 
 class EventController implements BaseController {
     path: string;
@@ -92,11 +92,11 @@ class EventController implements BaseController {
             this.readHaveNotYetJoinedEventsHandler,
         );
         this.router.post(
-            '/image/upload',
+            '/image',
             [
                 authorizationMiddleware,
                 imageUploadMiddleware.single('eventImage'),
-                validationMiddleware(UploadEventImageDTO, RequestTypes.BODY),
+                validationMiddleware(EventImageDTO, RequestTypes.BODY),
             ],
             this.uploadEventImageHandler,
         );
@@ -222,8 +222,8 @@ class EventController implements BaseController {
     };
 
     private uploadEventImageHandler = async (
-        request: UploadEventImageRequest,
-        response: UploadEventImageResponse,
+        request: EventImageRequest,
+        response: EventImageResponse,
         next: NextFunction,
     ) => {
         try {
@@ -232,7 +232,7 @@ class EventController implements BaseController {
             const locals = response.locals;
 
             const serviceResponse = await this.service.uploadEventImage(body, files, locals);
-            return response.send({ statusCode: 200, message: serviceResponse.message });
+            return response.send({ statusCode: 200, message: serviceResponse.message, image: serviceResponse.image });
         } catch (error) {
             next(error);
         }

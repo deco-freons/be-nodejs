@@ -1,6 +1,6 @@
 import { BaseRequest } from '../../common/request/base.request';
-import UploadEventImageDTO from '../dto/event.image.dto';
+import EventImageDTO from '../dto/event.image.dto';
 
-interface UploadEventImageRequest extends BaseRequest<unknown, unknown, UploadEventImageDTO, unknown, unknown> {}
+interface EventImageRequest extends BaseRequest<unknown, unknown, EventImageDTO, unknown, unknown> {}
 
-export default UploadEventImageRequest;
+export default EventImageRequest;

@@ -24,7 +24,7 @@ import ReadEventDetailsDTO from '../dto/event.readDetails.dto';
 import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
-import UploadEventImageDTO from '../dto/event.image.dto';
+import EventImageDTO from '../dto/event.image.dto';
 import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
@@ -32,7 +32,7 @@ import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
 import { EventUserResponseLocals } from '../response/event.user.response';
 import { ReadEventResponseLocals } from '../response/event.read.response';
-import { UploadEventImageResponseLocals } from '../response/event.image.response';
+import { EventImageResponseLocals } from '../response/event.image.response';
 
 class EventService implements BaseService {
     eventRepository: Repository<ObjectLiteral>;
@@ -287,9 +287,9 @@ class EventService implements BaseService {
     };
 
     public uploadEventImage = async (
-        body: UploadEventImageDTO,
+        body: EventImageDTO,
         file: Express.MulterS3.File,
-        locals: UploadEventImageResponseLocals,
+        locals: EventImageResponseLocals,
     ) => {
         try {
             const email = locals.email;
@@ -307,7 +307,9 @@ class EventService implements BaseService {
             const image = await this.createEventImage(imageData);
             await this.updateEventImage(event, image);
 
-            return { message: 'Successfully upload event image ' };
+            const imageResponse = this.constructImageResponse(file);
+
+            return { message: 'Successfully upload event image.', image: imageResponse };
         } catch (error) {
             throw error;
         }
@@ -375,7 +377,7 @@ class EventService implements BaseService {
                 'event_creator.firstName',
                 'event_creator.lastName',
                 'event_creator.username',
-                'event_image.imageID',
+                'event_image.imageUrl',
             ])
             .where('event.eventID = :eventID', { eventID: eventID })
             .getOne();
@@ -435,9 +437,12 @@ class EventService implements BaseService {
                 'event.eventID',
                 'event.eventName',
                 'event.date',
+                'event.startTime',
+                'event.endTime',
                 'event.longitude',
                 'event.latitude',
                 'event.locationName',
+                'event.shortDescription',
                 'location.suburb',
                 'location.city',
                 'location.state',
@@ -647,9 +652,12 @@ class EventService implements BaseService {
             eventID: event.eventID,
             eventName: event.eventName,
             date: event.date,
+            startTime: event.startTime,
+            endTime: event.endTime,
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
+            shortDescription: event.shortDescription,
             location: location,
             locationName: event.locationName,
             eventImage: event.eventImage,
@@ -785,6 +793,13 @@ class EventService implements BaseService {
             imageUrl: image.location,
         };
         return imageData;
+    };
+
+    private constructImageResponse = (image: Express.MulterS3.File) => {
+        const imageResponse: Partial<Image> = {
+            imageUrl: image.location,
+        };
+        return imageResponse;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
