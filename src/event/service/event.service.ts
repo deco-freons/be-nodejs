@@ -449,9 +449,11 @@ class EventService implements BaseService {
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
+                'event_image.imageUrl'
             ])
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
+            .leftJoin('event.eventImage', 'event_image')
             .where('event.eventID NOT IN (:...eventIDs)', { eventIDs: [-1, ...eventJoinedIDs] })
             .getMany();
         return eventsNotJoined as Event[];
