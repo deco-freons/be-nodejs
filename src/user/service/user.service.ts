@@ -162,7 +162,9 @@ class UserService implements BaseService {
             const image = await this.createUserImage(imageData);
             await this.updateUserImage(user, image);
 
-            return { message: 'Successfully upload user image ' };
+            const imageResponse = this.constructImageResponse(file);
+
+            return { message: 'Successfully upload user image.', image: imageResponse };
         } catch (error) {
             throw error;
         }
@@ -362,6 +364,13 @@ class UserService implements BaseService {
             imageUrl: image.location,
         };
         return imageData;
+    };
+
+    private constructImageResponse = (image: Express.MulterS3.File) => {
+        const imageResponse: Partial<Image> = {
+            imageUrl: image.location,
+        };
+        return imageResponse;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {

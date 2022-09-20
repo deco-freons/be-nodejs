@@ -152,7 +152,7 @@ class UserController implements BaseController {
             console.log(request.file);
 
             const serviceResponse = await this.service.uploadUserImage(files, locals);
-            return response.send({ statusCode: 200, message: serviceResponse.message });
+            return response.send({ statusCode: 200, message: serviceResponse.message, image: serviceResponse.image });
         } catch (error) {
             next(error);
         }

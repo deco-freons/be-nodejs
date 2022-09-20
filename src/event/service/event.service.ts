@@ -307,7 +307,9 @@ class EventService implements BaseService {
             const image = await this.createEventImage(imageData);
             await this.updateEventImage(event, image);
 
-            return { message: 'Successfully upload event image.' };
+            const imageResponse = this.constructImageResponse(file);
+
+            return { message: 'Successfully upload event image.', image: imageResponse };
         } catch (error) {
             throw error;
         }
@@ -785,6 +787,13 @@ class EventService implements BaseService {
             imageUrl: image.location,
         };
         return imageData;
+    };
+
+    private constructImageResponse = (image: Express.MulterS3.File) => {
+        const imageResponse: Partial<Image> = {
+            imageUrl: image.location,
+        };
+        return imageResponse;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
