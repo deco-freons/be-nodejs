@@ -82,7 +82,7 @@ class EventService implements BaseService {
 
             const locationID = body.location;
             const location = await this.getLocation(locationID);
-            if (!location) throw new NotFoundException('Location unknown.');
+            if (!location) throw new NotFoundException('Location Unknown.');
 
             const eventPrice = body.eventPrice;
             const eventPriceData = await this.constructEventPriceData(eventPrice);
@@ -194,13 +194,23 @@ class EventService implements BaseService {
 
             const locationID = body.location;
             const location = await this.getLocation(locationID);
-            await this.updateEventDetails(body, eventID, location);
+            if (!location) throw new NotFoundException('Location Unknown.');
+
+            const eventStatusID = body.eventStatus;
+            const eventStatus = await this.getStatus(eventStatusID);
+            if (!eventStatus) throw new NotFoundException('Status Invalid.');
+
+            await this.updateEventDetails(body, eventID, location, eventStatus);
 
             const categoryIDs = body.categories;
             const categories = await this.getCategoriesByID(categoryIDs);
             if (!categories) throw new NotFoundException('Categories Invalid.');
-
             await this.updateEventCategories(event, categories);
+
+            const eventPrice = body.eventPrice;
+            const eventPriceData = await this.constructEventPriceData(eventPrice);
+            const price = await this.createEventPrice(eventPriceData);
+            await this.updateEventPrice(event, price);
 
             const data = this.constructAlgoliaData(eventID, body, location, event.eventCreator, categories);
             await this.index.saveObject(data);
@@ -407,6 +417,7 @@ class EventService implements BaseService {
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.priceID',
                 'event_price.fee',
                 'currency.currencyShortName',
                 'event_creator.firstName',
@@ -417,7 +428,6 @@ class EventService implements BaseService {
             ])
             .where('event.eventID = :eventID', { eventID: eventID })
             .getOne();
-        console.log(event);
 
         return event as Event;
     };
@@ -616,7 +626,7 @@ class EventService implements BaseService {
         return status;
     };
 
-    private updateEventDetails = async (body: UpdateEventDTO, eventID: number, location: Location) => {
+    private updateEventDetails = async (body: UpdateEventDTO, eventID: number, location: Location, status: Status) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder
             .update(Event)
@@ -631,6 +641,7 @@ class EventService implements BaseService {
                 locationName: body.locationName,
                 shortDescription: body.shortDescription,
                 description: body.description,
+                eventStatus: status,
             })
             .where('eventID = :eventID', { eventID: eventID })
             .execute();
@@ -883,7 +894,7 @@ class EventService implements BaseService {
 
     private constructEventPriceData = async (eventPrice: PriceDTO) => {
         const currency = await this.getCurrency(eventPrice.currency);
-        if (!currency) throw new NotFoundException('Currency invalid.');
+        if (!currency) throw new NotFoundException('Currency Invalid.');
 
         const eventPriceData: Partial<Price> = {
             fee: eventPrice.fee,
