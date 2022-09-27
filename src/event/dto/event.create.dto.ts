@@ -8,7 +8,10 @@ import {
     IsString,
     MaxLength,
     MinLength,
+    ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import PriceDTO from '../../common/dto/price.dto';
 
 class CreateEventDTO {
     @IsString()
@@ -45,6 +48,10 @@ class CreateEventDTO {
 
     @IsString()
     description: string;
+
+    @ValidateNested()
+    @Type(() => PriceDTO)
+    eventPrice: PriceDTO;
 }
 
 export default CreateEventDTO;

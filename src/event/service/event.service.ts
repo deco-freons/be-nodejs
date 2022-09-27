@@ -3,11 +3,15 @@ import { SearchClient, SearchIndex } from 'algoliasearch';
 import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 
 import Algolia from '../../common/config/algolia';
-import BaseService from '../../common/service/base.service';
+import SortDTO from '../../common/dto/sort.dto';
+import PriceDTO from '../../common/dto/price.dto';
+import Currency from '../../common/entity/currency.entity';
+import Price from '../../common/entity/price.entity';
+import Status from '../../common/entity/status.entity';
 import ConflictException from '../../common/exception/conflict.exception';
 import ForbiddenException from '../../common/exception/forbidden.exception';
 import NotFoundException from '../../common/exception/notFound.exception';
-import SortDTO from '../../common/dto/sort.dto';
+import BaseService from '../../common/service/base.service';
 import { LOGICAL_OPERATION, SORT_BY, UNIX } from '../../common/enum/event.enum';
 
 import User from '../../auth/entity/user.entity';
@@ -40,6 +44,9 @@ class EventService implements BaseService {
     categoryRepository: Repository<ObjectLiteral>;
     locationRepository: Repository<ObjectLiteral>;
     imageRepository: Repository<ObjectLiteral>;
+    currencyRepository: Repository<ObjectLiteral>;
+    priceRepository: Repository<ObjectLiteral>;
+    statusRepository: Repository<ObjectLiteral>;
     algolia: SearchClient;
     index: SearchIndex;
 
@@ -49,6 +56,9 @@ class EventService implements BaseService {
         this.categoryRepository = database.getRepository(Preference);
         this.locationRepository = database.getRepository(Location);
         this.imageRepository = database.getRepository(Image);
+        this.currencyRepository = database.getRepository(Currency);
+        this.priceRepository = database.getRepository(Price);
+        this.statusRepository = database.getRepository(Status);
 
         this.algolia = Algolia;
         this.index = this.algolia.initIndex('event');
@@ -74,6 +84,12 @@ class EventService implements BaseService {
             const location = await this.getLocation(locationID);
             if (!location) throw new NotFoundException('Location unknown.');
 
+            const eventPrice = body.eventPrice;
+            const eventPriceData = await this.constructEventPriceData(eventPrice);
+            const price = await this.createEventPrice(eventPriceData);
+
+            const eventStatus = await this.getStatus('CREATED');
+
             const eventData: Partial<Event> = {
                 eventName: body.eventName,
                 categories: categories,
@@ -87,9 +103,11 @@ class EventService implements BaseService {
                 shortDescription: body.shortDescription,
                 description: body.description,
                 eventCreator: user,
+                eventStatus: eventStatus,
             };
             const event = await this.createEventDetails(eventData);
             await this.updateEventCategories(event, categories);
+            await this.updateEventPrice(event, price);
             await this.createEventJoinedByUser(user, event);
 
             const data = this.constructAlgoliaData(event.eventID, event, location, user, categories);
@@ -346,8 +364,8 @@ class EventService implements BaseService {
     };
 
     private createEventImage = async (imageData: Partial<Image>) => {
-        const imageQueryBuilder = this.imageRepository.createQueryBuilder();
-        const eventImageInsertResult = await imageQueryBuilder
+        const queryBuilder = this.imageRepository.createQueryBuilder();
+        const eventImageInsertResult = await queryBuilder
             .insert()
             .into(Image)
             .values(imageData)
@@ -355,6 +373,18 @@ class EventService implements BaseService {
             .execute();
         const eventImage = eventImageInsertResult.generatedMaps[0] as Image;
         return eventImage;
+    };
+
+    private createEventPrice = async (eventPriceData: Partial<Price>) => {
+        const queryBuilder = this.priceRepository.createQueryBuilder();
+        const eventPriceInsertResult = await queryBuilder
+            .insert()
+            .into(Price)
+            .values(eventPriceData)
+            .returning('*')
+            .execute();
+        const eventPrice = eventPriceInsertResult.generatedMaps[0] as Price;
+        return eventPrice;
     };
 
     private cancelEventJoinedByUser = async (user: User, event: Event) => {
@@ -449,7 +479,7 @@ class EventService implements BaseService {
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
-                'event_image.imageUrl'
+                'event_image.imageUrl',
             ])
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
@@ -486,6 +516,12 @@ class EventService implements BaseService {
             .innerJoin('event.eventImage', 'event_image')
             .getMany();
         return events as Event[];
+    };
+
+    private getEventPrice = async (event: Event) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        const price = await queryBuilder.relation(Event, 'eventPrice').of(event).loadOne();
+        return price;
     };
 
     private getAllCategoriesID = async () => {
@@ -552,6 +588,26 @@ class EventService implements BaseService {
         return user as User;
     };
 
+    private getCurrency = async (currencyShortName: string) => {
+        const queryBuilder = this.currencyRepository.createQueryBuilder();
+        const currency = await queryBuilder
+            .select(['currency.currencyShortName', 'currency.currencyLongName'])
+            .from(Currency, 'currency')
+            .where('currency.currencyShortName = :currencyShortName', { currencyShortName: currencyShortName })
+            .getOne();
+        return currency;
+    };
+
+    private getStatus = async (statusID: string) => {
+        const queryBuilder = this.statusRepository.createQueryBuilder();
+        const status = await queryBuilder
+            .select(['status.statusID', 'status.statusName'])
+            .from(Status, 'status')
+            .where('status.statusID = :statusID', { statusID: statusID })
+            .getOne();
+        return status
+    };
+
     private updateEventDetails = async (body: UpdateEventDTO, eventID: number, location: Location) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder
@@ -584,6 +640,12 @@ class EventService implements BaseService {
         await queryBuilder.relation(Event, 'eventImage').of(event).set(image);
     };
 
+    private updateEventPrice = async (event: Event, price: Partial<Price>) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder();
+        if (event.eventPrice) await this.deleteEventPriceByPriceID(event.eventPrice.priceID);
+        await queryBuilder.relation(Event, 'eventPrice').of(event).set(price);
+    };
+
     private deleteEventByEventID = async (eventID: number) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder.delete().from(Event).where('eventID = :eventID', { eventID: eventID }).execute();
@@ -592,6 +654,11 @@ class EventService implements BaseService {
     private deleteEventImageByImageID = async (imageID: string) => {
         const queryBuilder = this.imageRepository.createQueryBuilder();
         await queryBuilder.delete().from(Image).where('imageID = :imageID', { imageID: imageID }).execute();
+    };
+
+    private deleteEventPriceByPriceID = async (priceID: string) => {
+        const queryBuilder = this.priceRepository.createQueryBuilder();
+        await queryBuilder.delete().from(Price).where('priceID = :priceID', { priceID: priceID }).execute();
     };
 
     private filterEvents = (events: Partial<EventDetails>[], filter: FilterEventDTO, todaysDate: Date) => {
@@ -802,6 +869,17 @@ class EventService implements BaseService {
             imageUrl: image.location,
         };
         return imageResponse;
+    };
+
+    private constructEventPriceData = async (eventPrice: PriceDTO) => {
+        const currency = await this.getCurrency(eventPrice.currency);
+        if (!currency) throw new NotFoundException('Currency invalid.');
+
+        const eventPriceData: Partial<Price> = {
+            fee: eventPrice.fee,
+            currency: currency,
+        };
+        return eventPriceData;
     };
 
     private calculateDistanceBetweenUserAndEventLocation = (event: Event, longitude: number, latitude: number) => {
