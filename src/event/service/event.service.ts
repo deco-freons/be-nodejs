@@ -88,7 +88,7 @@ class EventService implements BaseService {
             const eventPriceData = await this.constructEventPriceData(eventPrice);
             const price = await this.createEventPrice(eventPriceData);
 
-            const eventStatus = await this.getStatus('CREATED');
+            const eventStatus = await this.getStatus('COMING_SOON');
 
             const eventData: Partial<Event> = {
                 eventName: body.eventName,
@@ -399,18 +399,26 @@ class EventService implements BaseService {
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
+            .leftJoin('event.eventStatus', 'event_status')
             .addSelect([
                 'location.locationID',
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.firstName',
                 'event_creator.lastName',
                 'event_creator.username',
                 'event_image.imageUrl',
+                'event_status.statusName',
             ])
             .where('event.eventID = :eventID', { eventID: eventID })
             .getOne();
+        console.log(event);
+
         return event as Event;
     };
 
@@ -605,7 +613,7 @@ class EventService implements BaseService {
             .from(Status, 'status')
             .where('status.statusID = :statusID', { statusID: statusID })
             .getOne();
-        return status
+        return status;
     };
 
     private updateEventDetails = async (body: UpdateEventDTO, eventID: number, location: Location) => {
@@ -803,8 +811,10 @@ class EventService implements BaseService {
             locationName: event.locationName,
             shortDescription: event.shortDescription,
             description: event.description,
-            eventImage: event.eventImage,
+            eventPrice: event.eventPrice,
             eventCreator: event.eventCreator,
+            eventImage: event.eventImage,
+            eventStatus: event.eventStatus,
             participants: participants.length,
             participantsList: participants,
             participated: participated,
