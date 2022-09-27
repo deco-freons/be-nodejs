@@ -533,11 +533,13 @@ class EventService implements BaseService {
                 'event.endTime',
                 'event_creator.username',
                 'event_image.imageUrl',
+                'event_status.statusName',
             ])
             .innerJoin('event.categories', 'categories')
             .innerJoin('event.eventCreator', 'event_creator')
             .innerJoin('event.location', 'location')
             .innerJoin('event.eventImage', 'event_image')
+            .innerJoin('event.eventStatus', 'event_status')
             .getMany();
         return events as Event[];
     };
@@ -781,6 +783,7 @@ class EventService implements BaseService {
             startTime: event.startTime,
             endTime: event.endTime,
             eventCreator: event.eventCreator.username,
+            eventStatus: event.eventStatus.statusName,
         };
         return data;
     };
