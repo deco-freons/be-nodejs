@@ -703,7 +703,7 @@ class EventService implements BaseService {
             eventName: event.eventName,
             shortDescription: event.shortDescription,
             description: event.description,
-            categories: categories.map((category) => category.preferenceName),
+            categories: categories.map((category) => category.preferenceID),
             locationName: event.locationName,
             suburb: location.suburb,
             city: location.city,
