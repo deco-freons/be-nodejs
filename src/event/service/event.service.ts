@@ -489,19 +489,25 @@ class EventService implements BaseService {
                 'event.endTime',
                 'event.longitude',
                 'event.latitude',
-                'event.locationName',
-                'event.shortDescription',
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event.locationName',
+                'event.shortDescription',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
                 'event_image.imageUrl',
+                'event_status.statusName',
             ])
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
+            .leftJoin('event.eventStatus', 'event_status')
             .where('event.eventID NOT IN (:...eventIDs)', { eventIDs: [-1, ...eventJoinedIDs] })
             .getMany();
         return eventsNotJoined as Event[];
@@ -748,8 +754,10 @@ class EventService implements BaseService {
             shortDescription: event.shortDescription,
             location: location,
             locationName: event.locationName,
-            eventImage: event.eventImage,
+            eventPrice: event.eventPrice,
             eventCreator: event.eventCreator,
+            eventImage: event.eventImage,
+            eventStatus: event.eventStatus,
             participants: participants.length,
         };
         return eventData;
