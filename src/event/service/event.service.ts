@@ -208,8 +208,8 @@ class EventService implements BaseService {
             await this.updateEventCategories(event, categories);
 
             const eventPrice = body.eventPrice;
-            const eventPriceData = await this.constructEventPriceData(eventPrice);
-            const price = await this.createEventPrice(eventPriceData);
+            let price = await this.constructEventPriceData(eventPrice);
+            if (!event.eventPrice) price = await this.createEventPrice(price);
             await this.updateEventPrice(event, price);
 
             const data = this.constructAlgoliaData(eventID, body, location, event.eventCreator, categories);
@@ -669,8 +669,20 @@ class EventService implements BaseService {
 
     private updateEventPrice = async (event: Event, price: Partial<Price>) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
-        if (event.eventPrice) await this.deleteEventPriceByPriceID(event.eventPrice.priceID);
-        await queryBuilder.relation(Event, 'eventPrice').of(event).set(price);
+        if (event.eventPrice) await this.updateEventPriceByPriceID(event.eventPrice.priceID, price);
+        else await queryBuilder.relation(Event, 'eventPrice').of(event).set(price);
+    };
+
+    private updateEventPriceByPriceID = async (priceID: string, price: Partial<Price>) => {
+        const queryBuilder = this.priceRepository.createQueryBuilder();
+        await queryBuilder
+            .update(Price)
+            .set({
+                fee: price.fee,
+                currency: price.currency,
+            })
+            .where('priceID = :priceID', { priceID: priceID })
+            .execute();
     };
 
     private deleteEventByEventID = async (eventID: number) => {
@@ -681,11 +693,6 @@ class EventService implements BaseService {
     private deleteEventImageByImageID = async (imageID: string) => {
         const queryBuilder = this.imageRepository.createQueryBuilder();
         await queryBuilder.delete().from(Image).where('imageID = :imageID', { imageID: imageID }).execute();
-    };
-
-    private deleteEventPriceByPriceID = async (priceID: string) => {
-        const queryBuilder = this.priceRepository.createQueryBuilder();
-        await queryBuilder.delete().from(Price).where('priceID = :priceID', { priceID: priceID }).execute();
     };
 
     private filterEvents = (events: Partial<EventDetails>[], filter: FilterEventDTO, todaysDate: Date) => {
