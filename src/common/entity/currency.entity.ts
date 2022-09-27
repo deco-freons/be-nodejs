@@ -1,12 +1,12 @@
 import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
-class Status {
-    @PrimaryColumn({ name: 'status_id' })
-    statusID: string;
+class Currency {
+    @PrimaryColumn({ name: 'currency_short_name' })
+    currencyShortName: string;
 
-    @Column({ name: 'status_name', unique: true })
-    statusName: string;
+    @Column({ name: 'currency_long_name', unique: true })
+    currencyLongName: string;
 
     @CreateDateColumn({ name: 'created_at', select: false })
     createdAt: Date;
@@ -15,4 +15,4 @@ class Status {
     updatedAt: Date;
 }
 
-export default Status;
+export default Currency;
