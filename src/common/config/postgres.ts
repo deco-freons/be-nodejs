@@ -2,7 +2,7 @@ import { DataSource } from 'typeorm';
 import pinoLogger from '../logger/pino.logger';
 
 import User from '../../auth/entity/user.entity';
-import Preference from '../../user/entity/preference.entity';
+import Preference from '../entity/preference.entity';
 import Event from '../../event/entity/event.entity';
 import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';

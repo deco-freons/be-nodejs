@@ -13,7 +13,7 @@ import {
 import User from '../../auth/entity/user.entity';
 import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
-import Preference from '../../user/entity/preference.entity';
+import Preference from '../../common/entity/preference.entity';
 
 @Entity()
 class Event {

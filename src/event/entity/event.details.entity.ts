@@ -1,6 +1,6 @@
 import User from '../../auth/entity/user.entity';
 import UserDTO from '../../auth/dto/user.dto';
-import Preference from '../../user/entity/preference.entity';
+import Preference from '../../common/entity/preference.entity';
 import Location from '../../location/entity/location.entity';
 import Image from '../../image/entity/image.entity';
 

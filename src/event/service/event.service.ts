@@ -11,7 +11,7 @@ import SortDTO from '../../common/dto/sort.dto';
 import { LOGICAL_OPERATION, SORT_BY, UNIX } from '../../common/enum/event.enum';
 
 import User from '../../auth/entity/user.entity';
-import Preference from '../../user/entity/preference.entity';
+import Preference from '../../common/entity/preference.entity';
 import Location from '../../location/entity/location.entity';
 import Image from '../../image/entity/image.entity';
 import UserDTO from '../../auth/dto/user.dto';

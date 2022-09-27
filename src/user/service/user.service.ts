@@ -10,7 +10,7 @@ import EventDetails from '../../event/entity/event.details.entity';
 import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
 
-import Preference from '../entity/preference.entity';
+import Preference from '../../common/entity/preference.entity';
 import UserDetails from '../entity/user.details.entity';
 import UserPreferenceDTO from '../dto/user.preference.dto';
 import UpdateUserDTO from '../dto/user.update.dto';
