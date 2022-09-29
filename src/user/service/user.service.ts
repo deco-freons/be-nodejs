@@ -8,7 +8,7 @@ import User from '../../auth/entity/user.entity';
 import Event from '../../event/entity/event.entity';
 import EventDetails from '../../event/entity/event.details.entity';
 import Image from '../../image/entity/image.entity';
-import Location from '../../location/entity/location.entity';
+import Location from '../../common/entity/location.entity';
 
 import Preference from '../../common/entity/preference.entity';
 import UserDetails from '../entity/user.details.entity';

@@ -4,7 +4,7 @@ import Status from '../../common/entity/status.entity';
 
 import User from '../../auth/entity/user.entity';
 import UserDTO from '../../auth/dto/user.dto';
-import Location from '../../location/entity/location.entity';
+import Location from '../../common/entity/location.entity';
 import Image from '../../image/entity/image.entity';
 
 class EventDetails {

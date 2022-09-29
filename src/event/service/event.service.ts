@@ -16,7 +16,7 @@ import { LOGICAL_OPERATION, SORT_BY, UNIX } from '../../common/enum/event.enum';
 
 import User from '../../auth/entity/user.entity';
 import Preference from '../../common/entity/preference.entity';
-import Location from '../../location/entity/location.entity';
+import Location from '../../common/entity/location.entity';
 import Image from '../../image/entity/image.entity';
 import UserDTO from '../../auth/dto/user.dto';
 
@@ -454,6 +454,31 @@ class EventService implements BaseService {
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
             .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
+            .getMany();
+        return events as Event[];
+    };
+
+    private getEventsByCategories = async (categories: string[]) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
+        const events = await queryBuilder
+            .select([
+                'event.eventID',
+                'event.eventName',
+                'event.date',
+                'event.longitude',
+                'event.latitude',
+                'event.locationName',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'event_creator.username',
+                'event_creator.firstName',
+                'event_creator.lastName',
+            ])
+            .leftJoin('event.categories', 'categories')
+            .leftJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.location', 'location')
+            .where('event_categories.category_id IN (:...categories)', { categories: categories })
             .getMany();
         return events as Event[];
     };
