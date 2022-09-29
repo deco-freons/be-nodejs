@@ -29,6 +29,7 @@ import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
 import EventImageDTO from '../dto/event.image.dto';
+import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.Search.dto';
 import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
@@ -64,7 +65,16 @@ class EventService implements BaseService {
         this.index = this.algolia.initIndex('event');
 
         this.index.setSettings({
-            searchableAttributes: ['eventName', 'eventCreator', 'locationName', 'suburb', 'city', 'state', 'country'],
+            searchableAttributes: [
+                'eventName',
+                'eventCreator',
+                'locationName',
+                'suburb',
+                'city',
+                'state',
+                'country',
+                'eventStatus',
+            ],
             attributesForFaceting: ['categories'],
         });
     }
@@ -119,7 +129,7 @@ class EventService implements BaseService {
         }
     };
 
-    public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
+    public searchEvent = async (body: SearchEventDTO, query: SearchEventQueryDTO) => {
         try {
             const todaysDate = new Date(body.todaysDate);
 
@@ -140,6 +150,33 @@ class EventService implements BaseService {
             const eventsAlgolia = await this.index.search<EventAlgolia>(keyword, { filters: categoryString });
             const eventsIDs = eventsAlgolia.hits.map((event) => event.eventID);
             const events = await this.getEventsByEventIDs(eventsIDs);
+            const eventsData = await this.constructEventsData(events, longitude, latitude);
+
+            const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
+            const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
+
+            return { message: 'Successfully retrieve events.', events: sortedAndFilteredEvents.slice(begin, end) };
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
+        try {
+            const todaysDate = new Date(body.todaysDate);
+
+            const begin = parseInt(query.skip) * parseInt(query.take);
+            const end = begin + parseInt(query.take);
+
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const filter = body.filter;
+            const sort = body.sort;
+
+            let categories;
+            if (filter && filter.eventCategories) categories = filter.eventCategories.category;
+            if (!categories) categories = await this.getAllCategoriesID();
+            const events = await this.getEventsByCategories(categories);
             const eventsData = await this.constructEventsData(events, longitude, latitude);
 
             const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
@@ -449,10 +486,12 @@ class EventService implements BaseService {
                 'event_creator.firstName',
                 'event_creator.lastName',
                 'event_image.imageUrl',
+                'event_status.statusName',
             ])
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventStatus', 'event_status')
             .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
             .getMany();
         return events as Event[];
@@ -474,10 +513,14 @@ class EventService implements BaseService {
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
+                'event_image.imageUrl',
+                'event_status.statusName',
             ])
             .leftJoin('event.categories', 'categories')
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
+            .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventStatus', 'event_status')
             .where('event_categories.category_id IN (:...categories)', { categories: categories })
             .getMany();
         return events as Event[];
@@ -560,11 +603,11 @@ class EventService implements BaseService {
                 'event_image.imageUrl',
                 'event_status.statusName',
             ])
-            .innerJoin('event.categories', 'categories')
-            .innerJoin('event.eventCreator', 'event_creator')
-            .innerJoin('event.location', 'location')
-            .innerJoin('event.eventImage', 'event_image')
-            .innerJoin('event.eventStatus', 'event_status')
+            .leftJoin('event.categories', 'categories')
+            .leftJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.location', 'location')
+            .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventStatus', 'event_status')
             .getMany();
         return events as Event[];
     };
@@ -806,7 +849,6 @@ class EventService implements BaseService {
             description: event.description,
             categories: event.categories.map((category) => category.preferenceID),
             locationName: event.locationName,
-            locationID: event.location.locationID,
             suburb: event.location.suburb,
             city: event.location.city,
             state: event.location.state,
@@ -829,6 +871,7 @@ class EventService implements BaseService {
     ) => {
         const data = {
             objectID: eventID,
+            eventID: event.eventID,
             eventName: event.eventName,
             shortDescription: event.shortDescription,
             description: event.description,
@@ -842,6 +885,7 @@ class EventService implements BaseService {
             startTime: event.startTime,
             endTime: event.endTime,
             eventCreator: creator.username,
+            eventStatus: event.eventStatus,
         };
         return data;
     };
