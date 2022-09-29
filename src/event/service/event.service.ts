@@ -32,11 +32,11 @@ import EventImageDTO from '../dto/event.image.dto';
 import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.Search.dto';
 import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
+import { ReadEventResponseLocals } from '../response/event.read.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
 import { EventUserResponseLocals } from '../response/event.user.response';
-import { ReadEventResponseLocals } from '../response/event.read.response';
 import { EventImageResponseLocals } from '../response/event.image.response';
 
 class EventService implements BaseService {
@@ -65,17 +65,8 @@ class EventService implements BaseService {
         this.index = this.algolia.initIndex('event');
 
         this.index.setSettings({
-            searchableAttributes: [
-                'eventName',
-                'eventCreator',
-                'locationName',
-                'suburb',
-                'city',
-                'state',
-                'country',
-                'eventStatus',
-            ],
-            attributesForFaceting: ['categories'],
+            searchableAttributes: ['eventName', 'eventCreator', 'locationName', 'suburb', 'city', 'state', 'country'],
+            attributesForFaceting: ['categories', 'eventStatus'],
         });
     }
 
@@ -145,9 +136,16 @@ class EventService implements BaseService {
             let categories;
             if (filter && filter.eventCategories) categories = filter.eventCategories.category;
             if (!categories) categories = await this.getAllCategoriesID();
-            const categoryString = `${this.constructCategoryString(categories)}`;
+            const categoryString = `${this.constructFilterStrings(categories, 'categories')}`;
 
-            const eventsAlgolia = await this.index.search<EventAlgolia>(keyword, { filters: categoryString });
+            let statuses;
+            if (filter && filter.eventStatus) statuses = filter.eventStatus.status;
+            if (!statuses) statuses = await this.getAllStatus();
+            const statusString = `${this.constructFilterStrings(categories, 'eventStatus')}`;
+
+            const eventsAlgolia = await this.index.search<EventAlgolia>(keyword, {
+                facetFilters: [categoryString, statusString],
+            });
             const eventsIDs = eventsAlgolia.hits.map((event) => event.eventID);
             const events = await this.getEventsByEventIDs(eventsIDs);
             const eventsData = await this.constructEventsData(events, longitude, latitude);
@@ -320,8 +318,8 @@ class EventService implements BaseService {
 
     public readHaveNotYetJoinedEvents = async (
         body: ReadEventDTO,
-        locals: ReadEventResponseLocals,
         query: ReadEventQueryDTO,
+        locals: ReadEventResponseLocals,
     ) => {
         try {
             const begin = parseInt(query.skip) * parseInt(query.take);
@@ -612,12 +610,6 @@ class EventService implements BaseService {
         return events as Event[];
     };
 
-    private getEventPrice = async (event: Event) => {
-        const queryBuilder = this.eventRepository.createQueryBuilder();
-        const price = await queryBuilder.relation(Event, 'eventPrice').of(event).loadOne();
-        return price;
-    };
-
     private getAllCategoriesID = async () => {
         const queryBuilder = this.categoryRepository.createQueryBuilder();
         const categories = await queryBuilder
@@ -702,6 +694,13 @@ class EventService implements BaseService {
         return status;
     };
 
+    private getAllStatus = async () => {
+        const queryBuilder = this.statusRepository.createQueryBuilder();
+        const statuses = await queryBuilder.select('status.statusName').from(Status, 'status').getMany();
+        const statusIDs = statuses.map((status) => status.statusName);
+        return statusIDs;
+    };
+
     private updateEventDetails = async (body: UpdateEventDTO, eventID: number, location: Location, status: Status) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder
@@ -768,8 +767,10 @@ class EventService implements BaseService {
 
         if (!filter) return filteredEvents;
 
-        const daysToEventDTO = filter.daysToEvent;
         const radiusDTO = filter.eventRadius;
+        const daysToEventDTO = filter.daysToEvent;
+        const participantsDTO = filter.eventParticipants;
+        const statusDTO = filter.eventStatus;
 
         if (radiusDTO && radiusDTO.radius) {
             filteredEvents = filteredEvents.filter((event) =>
@@ -781,6 +782,20 @@ class EventService implements BaseService {
             filteredEvents = filteredEvents.filter((event) =>
                 this.filterEventsWithinDays(event, daysToEventDTO.days, todaysDate, daysToEventDTO.isMoreOrLess),
             );
+        }
+
+        if (participantsDTO && participantsDTO.participants) {
+            filteredEvents = filteredEvents.filter((event) =>
+                this.filterEventsWithinNumberOfParticipants(
+                    event,
+                    participantsDTO.participants,
+                    participantsDTO.isMoreOrLess,
+                ),
+            );
+        }
+
+        if (statusDTO && statusDTO.status) {
+            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithStatus(event, statusDTO.status));
         }
 
         return filteredEvents;
@@ -805,9 +820,9 @@ class EventService implements BaseService {
         return sortedEvents;
     };
 
-    private constructCategoryString = (categories: string[]) => {
-        const categoriesString = categories.map((category) => `categories:${category}`);
-        return categoriesString.join(' OR ');
+    private constructFilterStrings = (filters: string[], categoryOrStatus: string) => {
+        const filterStrings = filters.map((filter) => `${categoryOrStatus}:${filter}`);
+        return filterStrings.join(' OR ');
     };
 
     private constructEventsData = async (events: Event[], longitude: number, latitude: number) => {
@@ -998,8 +1013,8 @@ class EventService implements BaseService {
     };
 
     private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number, isMoreOrLess: string) => {
-        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return event.distance <= radius;
-        return event.distance >= radius;
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.distance >= radius;
+        return event.distance <= radius;
     };
 
     private filterEventsWithinDays = (
@@ -1011,8 +1026,21 @@ class EventService implements BaseService {
         const eventDate = new Date(event.date);
         const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
         const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
-        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return difference >= 0 && difference <= daysToEventInSeconds;
-        return difference >= daysToEventInSeconds;
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return difference >= daysToEventInSeconds;
+        return difference >= 0 && difference <= daysToEventInSeconds;
+    };
+
+    private filterEventsWithinNumberOfParticipants = (
+        event: Partial<EventDetails>,
+        participants: number,
+        isMoreOrLess: string,
+    ) => {
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.participants >= participants;
+        return event.participants <= participants;
+    };
+
+    private filterEventsWithStatus = (event: Partial<EventDetails>, status: string[]) => {
+        return status.includes(event.eventStatus.statusName);
     };
 
     private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {

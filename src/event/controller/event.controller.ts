@@ -134,7 +134,11 @@ class EventController implements BaseController {
         }
     };
 
-    private searchEventHandler = async (request: SearchEventRequest, response: SearchEventResponse, next: NextFunction) => {
+    private searchEventHandler = async (
+        request: SearchEventRequest,
+        response: SearchEventResponse,
+        next: NextFunction,
+    ) => {
         try {
             const body = request.body;
             const query = request.query;
@@ -235,9 +239,9 @@ class EventController implements BaseController {
     ) => {
         try {
             const body = request.body;
-            const locals = response.locals;
             const query = request.query;
-            const serviceResponse = await this.service.readHaveNotYetJoinedEvents(body, locals, query);
+            const locals = response.locals;
+            const serviceResponse = await this.service.readHaveNotYetJoinedEvents(body, query, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
         } catch (error) {
             next(error);

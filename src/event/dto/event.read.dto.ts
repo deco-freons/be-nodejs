@@ -3,9 +3,11 @@ import { Type } from 'class-transformer';
 
 import CategoriesDTO from '../../common/dto/category.dto';
 import DaysDTO from '../../common/dto/days.dto';
+import ParticipantsDTO from '../../common/dto/participants.dto';
 import RadiusDTO from '../../common/dto/radius.dto';
 import SearchDTO from '../../common/dto/search.dto';
 import SortDTO from '../../common/dto/sort.dto';
+import StatusDTO from '../../common/dto/status.dto';
 import UserLongLatDTO from '../../user/dto/user.longlat.dto';
 
 class FilterEventDTO {
@@ -20,6 +22,14 @@ class FilterEventDTO {
     @ValidateNested()
     @Type(() => RadiusDTO)
     eventRadius: RadiusDTO;
+
+    @ValidateNested()
+    @Type(() => ParticipantsDTO)
+    eventParticipants: ParticipantsDTO
+
+    @ValidateNested()
+    @Type(() => StatusDTO)
+    eventStatus: StatusDTO
 }
 
 class ReadEventDTO extends UserLongLatDTO {

@@ -18,6 +18,7 @@ const EVENT = {
     CATEGORIES: ['GM', 'MV', 'DC', 'CL', 'BB', 'NT', 'FB'] as const,
     DAYS_TO_EVENT: [1, 7, 14, 21, 28] as const,
     RADIUS: [5, 10, 20] as const,
+    STATUS: ['Created', 'Coming Soon', 'Ongoing', 'In Progress', 'Done'] as const,
     SORT_BY: Object.values(SORT_BY),
 };
 
