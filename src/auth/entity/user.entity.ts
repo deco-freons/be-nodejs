@@ -11,7 +11,7 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
-import Preference from '../../user/entity/preference.entity';
+import Preference from '../../common/entity/preference.entity';
 import Event from '../../event/entity/event.entity';
 import Location from '../../location/entity/location.entity';
 import Image from '../../image/entity/image.entity';

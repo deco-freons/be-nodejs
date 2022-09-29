@@ -17,10 +17,14 @@ const validationMiddleware = <T>(type: ClassConstructor<T>, property: RequestTyp
                         message = errors
                             .map((error: ValidationError) =>
                                 error.children.map((children: ValidationError) => {
-                                    if (children.children) {
+                                    if (children.children && children.children.length > 0) {
                                         return children.children.map((child: ValidationError) =>
                                             Object.values(child.constraints || ''),
                                         );
+                                    } else if (children.children.length == 0) {
+                                        for (const key in children.constraints) {
+                                            return children.constraints[key];
+                                        }
                                     } else {
                                         return 'Invalid object';
                                     }

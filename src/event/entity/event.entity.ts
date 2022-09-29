@@ -10,10 +10,14 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from 'typeorm';
+
+import Preference from '../../common/entity/preference.entity';
+import Price from '../../common/entity/price.entity';
+import Status from '../../common/entity/status.entity';
+
 import User from '../../auth/entity/user.entity';
 import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
-import Preference from '../../user/entity/preference.entity';
 
 @Entity()
 class Event {
@@ -65,16 +69,24 @@ class Event {
     @Column({ name: 'description', default: 'No description.' })
     description: string;
 
+    @OneToOne(() => Price, (price) => price.priceID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @JoinColumn({ name: 'event_price', referencedColumnName: 'priceID' })
+    eventPrice: Price;
+
     @ManyToOne(() => User, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'event_creator', referencedColumnName: 'userID' })
     eventCreator: User;
 
-    @ManyToMany(() => User, (user) => user.eventJoined, { onDelete: 'CASCADE', onUpdate: 'SET NULL' })
+    @ManyToMany(() => User, (user) => user.eventJoined, { onDelete: 'CASCADE', onUpdate: 'CASCADE' })
     participants: User[];
 
     @OneToOne(() => Image, (image) => image.imageID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
     @JoinColumn({ name: 'event_image', referencedColumnName: 'imageID' })
     eventImage: Image;
+
+    @ManyToOne(() => Status, (status) => status.statusID, { onDelete: 'SET NULL', onUpdate: 'CASCADE' })
+    @JoinColumn({ name: 'event_status', referencedColumnName: 'statusID' })
+    eventStatus: Status;
 
     @CreateDateColumn({ name: 'created_at', select: false })
     createdAt: Date;

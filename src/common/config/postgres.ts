@@ -1,8 +1,12 @@
 import { DataSource } from 'typeorm';
 import pinoLogger from '../logger/pino.logger';
 
+import Currency from '../entity/currency.entity';
+import Preference from '../entity/preference.entity';
+import Price from '../entity/price.entity';
+import Status from '../entity/status.entity';
+
 import User from '../../auth/entity/user.entity';
-import Preference from '../../user/entity/preference.entity';
 import Event from '../../event/entity/event.entity';
 import Image from '../../image/entity/image.entity';
 import Location from '../../location/entity/location.entity';
@@ -25,7 +29,7 @@ class PostgreSQLDatabase {
             database: process.env.DB_NAME,
             synchronize: true,
             logging: false,
-            entities: [User, Preference, Event, Location, Image],
+            entities: [User, Preference, Event, Location, Image, Status, Currency, Price],
             migrations: [],
             subscribers: [],
         });
