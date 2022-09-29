@@ -316,6 +316,39 @@ class EventService implements BaseService {
         }
     };
 
+    public readHaveJoinedEvents = async (
+        body: ReadEventDTO,
+        query: ReadEventQueryDTO,
+        locals: ReadEventResponseLocals,
+    ) => {
+        try {
+            const begin = parseInt(query.skip) * parseInt(query.take);
+            const end = begin + parseInt(query.take);
+
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const filter = body.filter;
+            const sort = body.sort;
+
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventsJoined = await this.getUserJoinedEvents(user.userID);
+            const eventsData = await this.constructEventsData(eventsJoined, longitude, latitude);
+            const filteredEvents = this.filterEvents(eventsData, filter, undefined);
+            const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
+
+            return {
+                message: 'Successfully retrieve joined events.',
+                events: sortedAndFilteredEvents.slice(begin, end),
+            };
+        } catch (error) {
+            throw error;
+        }
+    };
+
     public readHaveNotYetJoinedEvents = async (
         body: ReadEventDTO,
         query: ReadEventQueryDTO,
@@ -534,6 +567,37 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
         return participants as User[];
+    };
+
+    private getUserJoinedEvents = async (userID: number) => {
+        const userQueryBuilder = this.userRepository.createQueryBuilder('user');
+        const user = await userQueryBuilder
+            .leftJoin('user.eventJoined', 'user_joined_event')
+            .leftJoin('user_joined_event.eventCreator', 'event_creator')
+            .leftJoin('user_joined_event.location', 'location')
+            .leftJoin('user_joined_event.eventImage', 'event_image')
+            .leftJoin('user_joined_event.eventStatus', 'event_status')
+            .addSelect([
+                'user_joined_event.eventID',
+                'user_joined_event.eventName',
+                'user_joined_event.date',
+                'user_joined_event.startTime',
+                'user_joined_event.endTime',
+                'user_joined_event.longitude',
+                'user_joined_event.latitude',
+                'user_joined_event.locationName',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'event_creator.username',
+                'event_creator.firstName',
+                'event_creator.lastName',
+                'event_image.imageUrl',
+                'event_status.statusName',
+            ])
+            .where('user.userID = :userID', { userID: userID })
+            .getOne();
+        return user.eventJoined as Event[];
     };
 
     private getUserNotJoinedEvents = async (userID: number) => {

@@ -95,6 +95,15 @@ class EventController implements BaseController {
             this.cancelEventHandler,
         );
         this.router.post(
+            '/read/join',
+            [
+                authorizationMiddleware,
+                validationMiddleware(ReadEventDTO, RequestTypes.BODY),
+                validationMiddleware(ReadEventQueryDTO, RequestTypes.QUERY),
+            ],
+            this.readHaveEventsHandler,
+        );
+        this.router.post(
             '/read/not',
             [
                 authorizationMiddleware,
@@ -227,6 +236,22 @@ class EventController implements BaseController {
             const locals = response.locals;
             const serviceResponse = await this.service.cancelEvent(body, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private readHaveEventsHandler = async (
+        request: ReadEventRequest,
+        response: ReadEventResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const query = request.query;
+            const locals = response.locals;
+            const serviceResponse = await this.service.readHaveJoinedEvents(body, query, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
         } catch (error) {
             next(error);
         }
