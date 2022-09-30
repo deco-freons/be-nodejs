@@ -29,7 +29,7 @@ import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
 import EventImageDTO from '../dto/event.image.dto';
-import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.Search.dto';
+import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.search.dto';
 import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
 import { ReadEventResponseLocals } from '../response/event.read.response';
