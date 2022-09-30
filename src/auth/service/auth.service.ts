@@ -17,7 +17,7 @@ import { EMAIL } from '../../common/enum/email.enum';
 import { TTL } from '../../common/enum/token.enum';
 
 import Preference from '../../common/entity/preference.entity';
-import Location from '../../location/entity/location.entity';
+import Location from '../../common/entity/location.entity';
 
 import User from '../entity/user.entity';
 import UserDTO from '../dto/user.dto';

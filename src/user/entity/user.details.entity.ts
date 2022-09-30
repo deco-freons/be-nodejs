@@ -1,5 +1,5 @@
 import EventDetails from '../../event/entity/event.details.entity';
-import Location from '../../location/entity/location.entity';
+import Location from '../../common/entity/location.entity';
 import Preference from '../../common/entity/preference.entity';
 import Image from '../../image/entity/image.entity';
 

@@ -16,7 +16,7 @@ import { LOGICAL_OPERATION, SORT_BY, UNIX } from '../../common/enum/event.enum';
 
 import User from '../../auth/entity/user.entity';
 import Preference from '../../common/entity/preference.entity';
-import Location from '../../location/entity/location.entity';
+import Location from '../../common/entity/location.entity';
 import Image from '../../image/entity/image.entity';
 import UserDTO from '../../auth/dto/user.dto';
 
@@ -29,13 +29,14 @@ import UpdateEventDTO from '../dto/event.update.dto';
 import DeleteEventDTO from '../dto/event.delete.dto';
 import EventUserDTO from '../dto/event.user.dto';
 import EventImageDTO from '../dto/event.image.dto';
+import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.Search.dto';
 import { FilterEventDTO, ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { CreateEventResponseLocals } from '../response/event.create.response';
+import { ReadEventResponseLocals } from '../response/event.read.response';
 import { ReadEventDetailsResponseLocals } from '../response/event.readDetails.response';
 import { UpdateEventResponseLocals } from '../response/event.update.response';
 import { DeleteEventResponseLocals } from '../response/event.delete.response';
 import { EventUserResponseLocals } from '../response/event.user.response';
-import { ReadEventResponseLocals } from '../response/event.read.response';
 import { EventImageResponseLocals } from '../response/event.image.response';
 
 class EventService implements BaseService {
@@ -65,7 +66,7 @@ class EventService implements BaseService {
 
         this.index.setSettings({
             searchableAttributes: ['eventName', 'eventCreator', 'locationName', 'suburb', 'city', 'state', 'country'],
-            attributesForFaceting: ['categories'],
+            attributesForFaceting: ['categories', 'eventStatus'],
         });
     }
 
@@ -119,7 +120,7 @@ class EventService implements BaseService {
         }
     };
 
-    public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
+    public searchEvent = async (body: SearchEventDTO, query: SearchEventQueryDTO) => {
         try {
             const todaysDate = new Date(body.todaysDate);
 
@@ -135,11 +136,45 @@ class EventService implements BaseService {
             let categories;
             if (filter && filter.eventCategories) categories = filter.eventCategories.category;
             if (!categories) categories = await this.getAllCategoriesID();
-            const categoryString = `${this.constructCategoryString(categories)}`;
+            const categoryString = `${this.constructFilterStrings(categories, 'categories')}`;
 
-            const eventsAlgolia = await this.index.search<EventAlgolia>(keyword, { filters: categoryString });
+            let statuses;
+            if (filter && filter.eventStatus) statuses = filter.eventStatus.status;
+            if (!statuses) statuses = await this.getAllStatus();
+            const statusString = `${this.constructFilterStrings(statuses, 'eventStatus')}`;
+
+            const eventsAlgolia = await this.index.search<EventAlgolia>(keyword, {
+                filters: `(${categoryString}) AND (${statusString})`,
+            });
             const eventsIDs = eventsAlgolia.hits.map((event) => event.eventID);
             const events = await this.getEventsByEventIDs(eventsIDs);
+            const eventsData = await this.constructEventsData(events, longitude, latitude);
+
+            const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
+            const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
+
+            return { message: 'Successfully retrieve events.', events: sortedAndFilteredEvents.slice(begin, end) };
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    public readEvent = async (body: ReadEventDTO, query: ReadEventQueryDTO) => {
+        try {
+            const todaysDate = new Date(body.todaysDate);
+
+            const begin = parseInt(query.skip) * parseInt(query.take);
+            const end = begin + parseInt(query.take);
+
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const filter = body.filter;
+            const sort = body.sort;
+
+            let categories;
+            if (filter && filter.eventCategories) categories = filter.eventCategories.category;
+            if (!categories) categories = await this.getAllCategoriesID();
+            const events = await this.getEventsByCategories(categories);
             const eventsData = await this.constructEventsData(events, longitude, latitude);
 
             const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
@@ -281,10 +316,43 @@ class EventService implements BaseService {
         }
     };
 
+    public readHaveJoinedEvents = async (
+        body: ReadEventDTO,
+        query: ReadEventQueryDTO,
+        locals: ReadEventResponseLocals,
+    ) => {
+        try {
+            const begin = parseInt(query.skip) * parseInt(query.take);
+            const end = begin + parseInt(query.take);
+
+            const longitude = body.longitude;
+            const latitude = body.latitude;
+            const filter = body.filter;
+            const sort = body.sort;
+
+            const email = locals.email;
+            const username = locals.username;
+            const user = await this.getUserByEmailAndUsername(email, username);
+            if (!user) throw new NotFoundException('User does not exist.');
+
+            const eventsJoined = await this.getUserJoinedEvents(user.userID);
+            const eventsData = await this.constructEventsData(eventsJoined, longitude, latitude);
+            const filteredEvents = this.filterEvents(eventsData, filter, undefined);
+            const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
+
+            return {
+                message: 'Successfully retrieve joined events.',
+                events: sortedAndFilteredEvents.slice(begin, end),
+            };
+        } catch (error) {
+            throw error;
+        }
+    };
+
     public readHaveNotYetJoinedEvents = async (
         body: ReadEventDTO,
-        locals: ReadEventResponseLocals,
         query: ReadEventQueryDTO,
+        locals: ReadEventResponseLocals,
     ) => {
         try {
             const begin = parseInt(query.skip) * parseInt(query.take);
@@ -449,11 +517,42 @@ class EventService implements BaseService {
                 'event_creator.firstName',
                 'event_creator.lastName',
                 'event_image.imageUrl',
+                'event_status.statusName',
             ])
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventStatus', 'event_status')
             .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
+            .getMany();
+        return events as Event[];
+    };
+
+    private getEventsByCategories = async (categories: string[]) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
+        const events = await queryBuilder
+            .select([
+                'event.eventID',
+                'event.eventName',
+                'event.date',
+                'event.longitude',
+                'event.latitude',
+                'event.locationName',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'event_creator.username',
+                'event_creator.firstName',
+                'event_creator.lastName',
+                'event_image.imageUrl',
+                'event_status.statusName',
+            ])
+            .leftJoin('event.categories', 'categories')
+            .leftJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.location', 'location')
+            .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventStatus', 'event_status')
+            .where('event_categories.category_id IN (:...categories)', { categories: categories })
             .getMany();
         return events as Event[];
     };
@@ -468,6 +567,37 @@ class EventService implements BaseService {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
         return participants as User[];
+    };
+
+    private getUserJoinedEvents = async (userID: number) => {
+        const userQueryBuilder = this.userRepository.createQueryBuilder('user');
+        const user = await userQueryBuilder
+            .leftJoin('user.eventJoined', 'user_joined_event')
+            .leftJoin('user_joined_event.eventCreator', 'event_creator')
+            .leftJoin('user_joined_event.location', 'location')
+            .leftJoin('user_joined_event.eventImage', 'event_image')
+            .leftJoin('user_joined_event.eventStatus', 'event_status')
+            .addSelect([
+                'user_joined_event.eventID',
+                'user_joined_event.eventName',
+                'user_joined_event.date',
+                'user_joined_event.startTime',
+                'user_joined_event.endTime',
+                'user_joined_event.longitude',
+                'user_joined_event.latitude',
+                'user_joined_event.locationName',
+                'location.suburb',
+                'location.city',
+                'location.state',
+                'event_creator.username',
+                'event_creator.firstName',
+                'event_creator.lastName',
+                'event_image.imageUrl',
+                'event_status.statusName',
+            ])
+            .where('user.userID = :userID', { userID: userID })
+            .getOne();
+        return user.eventJoined as Event[];
     };
 
     private getUserNotJoinedEvents = async (userID: number) => {
@@ -535,19 +665,13 @@ class EventService implements BaseService {
                 'event_image.imageUrl',
                 'event_status.statusName',
             ])
-            .innerJoin('event.categories', 'categories')
-            .innerJoin('event.eventCreator', 'event_creator')
-            .innerJoin('event.location', 'location')
-            .innerJoin('event.eventImage', 'event_image')
-            .innerJoin('event.eventStatus', 'event_status')
+            .leftJoin('event.categories', 'categories')
+            .leftJoin('event.eventCreator', 'event_creator')
+            .leftJoin('event.location', 'location')
+            .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventStatus', 'event_status')
             .getMany();
         return events as Event[];
-    };
-
-    private getEventPrice = async (event: Event) => {
-        const queryBuilder = this.eventRepository.createQueryBuilder();
-        const price = await queryBuilder.relation(Event, 'eventPrice').of(event).loadOne();
-        return price;
     };
 
     private getAllCategoriesID = async () => {
@@ -634,6 +758,13 @@ class EventService implements BaseService {
         return status;
     };
 
+    private getAllStatus = async () => {
+        const queryBuilder = this.statusRepository.createQueryBuilder();
+        const statuses = await queryBuilder.select('status.statusName').from(Status, 'status').getMany();
+        const statusIDs = statuses.map((status) => status.statusName);
+        return statusIDs;
+    };
+
     private updateEventDetails = async (body: UpdateEventDTO, eventID: number, location: Location, status: Status) => {
         const queryBuilder = this.eventRepository.createQueryBuilder();
         await queryBuilder
@@ -700,8 +831,10 @@ class EventService implements BaseService {
 
         if (!filter) return filteredEvents;
 
-        const daysToEventDTO = filter.daysToEvent;
         const radiusDTO = filter.eventRadius;
+        const daysToEventDTO = filter.daysToEvent;
+        const participantsDTO = filter.eventParticipants;
+        const statusDTO = filter.eventStatus;
 
         if (radiusDTO && radiusDTO.radius) {
             filteredEvents = filteredEvents.filter((event) =>
@@ -713,6 +846,20 @@ class EventService implements BaseService {
             filteredEvents = filteredEvents.filter((event) =>
                 this.filterEventsWithinDays(event, daysToEventDTO.days, todaysDate, daysToEventDTO.isMoreOrLess),
             );
+        }
+
+        if (participantsDTO && participantsDTO.participants) {
+            filteredEvents = filteredEvents.filter((event) =>
+                this.filterEventsWithinNumberOfParticipants(
+                    event,
+                    participantsDTO.participants,
+                    participantsDTO.isMoreOrLess,
+                ),
+            );
+        }
+
+        if (statusDTO && statusDTO.status) {
+            filteredEvents = filteredEvents.filter((event) => this.filterEventsWithStatus(event, statusDTO.status));
         }
 
         return filteredEvents;
@@ -737,9 +884,9 @@ class EventService implements BaseService {
         return sortedEvents;
     };
 
-    private constructCategoryString = (categories: string[]) => {
-        const categoriesString = categories.map((category) => `categories:${category}`);
-        return categoriesString.join(' OR ');
+    private constructFilterStrings = (filters: string[], categoryOrStatus: string) => {
+        const filterStrings = filters.map((filter) => `${categoryOrStatus}:"${filter}"`);
+        return filterStrings.join(' OR ');
     };
 
     private constructEventsData = async (events: Event[], longitude: number, latitude: number) => {
@@ -781,7 +928,6 @@ class EventService implements BaseService {
             description: event.description,
             categories: event.categories.map((category) => category.preferenceID),
             locationName: event.locationName,
-            locationID: event.location.locationID,
             suburb: event.location.suburb,
             city: event.location.city,
             state: event.location.state,
@@ -804,6 +950,7 @@ class EventService implements BaseService {
     ) => {
         const data = {
             objectID: eventID,
+            eventID: event.eventID,
             eventName: event.eventName,
             shortDescription: event.shortDescription,
             description: event.description,
@@ -817,6 +964,7 @@ class EventService implements BaseService {
             startTime: event.startTime,
             endTime: event.endTime,
             eventCreator: creator.username,
+            eventStatus: event.eventStatus,
         };
         return data;
     };
@@ -929,8 +1077,8 @@ class EventService implements BaseService {
     };
 
     private filterEventsWithinRadius = (event: Partial<EventDetails>, radius: number, isMoreOrLess: string) => {
-        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return event.distance <= radius;
-        return event.distance >= radius;
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.distance >= radius;
+        return event.distance <= radius;
     };
 
     private filterEventsWithinDays = (
@@ -942,8 +1090,21 @@ class EventService implements BaseService {
         const eventDate = new Date(event.date);
         const difference = (eventDate.getTime() - todaysDate.getTime()) / UNIX.MILLI_SECONDS;
         const daysToEventInSeconds = UNIX.ONE_DAY * daysToEvent;
-        if (isMoreOrLess == LOGICAL_OPERATION.LESS) return difference >= 0 && difference <= daysToEventInSeconds;
-        return difference >= daysToEventInSeconds;
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return difference >= daysToEventInSeconds;
+        return difference >= 0 && difference <= daysToEventInSeconds;
+    };
+
+    private filterEventsWithinNumberOfParticipants = (
+        event: Partial<EventDetails>,
+        participants: number,
+        isMoreOrLess: string,
+    ) => {
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.participants >= participants;
+        return event.participants <= participants;
+    };
+
+    private filterEventsWithStatus = (event: Partial<EventDetails>, status: string[]) => {
+        return status.includes(event.eventStatus.statusName);
     };
 
     private sortEventsByDistance = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {

@@ -9,7 +9,7 @@ import Status from '../entity/status.entity';
 import User from '../../auth/entity/user.entity';
 import Event from '../../event/entity/event.entity';
 import Image from '../../image/entity/image.entity';
-import Location from '../../location/entity/location.entity';
+import Location from '../entity/location.entity';
 
 class PostgreSQLDatabase {
     private database: DataSource;

@@ -20,6 +20,9 @@ import EventUserDTO from '../dto/event.user.dto';
 import EventUserRequest from '../request/event.user.request';
 import EventImageDTO from '../dto/event.image.dto';
 import EventImageRequest from '../request/event.image.request';
+import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.Search.dto';
+import { SearchEventRequest } from '../request/event.search.request';
+import { SearchEventResponse } from '../response/event.search.response';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
 import { ReadEventResponse } from '../response/event.read.response';
 import { CreateEventResponse } from '../response/event.create.response';
@@ -47,6 +50,15 @@ class EventController implements BaseController {
             '/create',
             [authorizationMiddleware, validationMiddleware(CreateEventDTO, RequestTypes.BODY)],
             this.createEventHandler,
+        );
+        this.router.post(
+            '/search',
+            [
+                authorizationMiddleware,
+                validationMiddleware(SearchEventDTO, RequestTypes.BODY),
+                validationMiddleware(SearchEventQueryDTO, RequestTypes.QUERY),
+            ],
+            this.searchEventHandler,
         );
         this.router.post(
             '/read',
@@ -83,6 +95,15 @@ class EventController implements BaseController {
             this.cancelEventHandler,
         );
         this.router.post(
+            '/read/join',
+            [
+                authorizationMiddleware,
+                validationMiddleware(ReadEventDTO, RequestTypes.BODY),
+                validationMiddleware(ReadEventQueryDTO, RequestTypes.QUERY),
+            ],
+            this.readHaveEventsHandler,
+        );
+        this.router.post(
             '/read/not',
             [
                 authorizationMiddleware,
@@ -117,6 +138,21 @@ class EventController implements BaseController {
                 message: serviceResponse.message,
                 eventID: serviceResponse.eventID,
             });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    private searchEventHandler = async (
+        request: SearchEventRequest,
+        response: SearchEventResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const query = request.query;
+            const serviceResponse = await this.service.searchEvent(body, query);
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
         } catch (error) {
             next(error);
         }
@@ -205,6 +241,22 @@ class EventController implements BaseController {
         }
     };
 
+    private readHaveEventsHandler = async (
+        request: ReadEventRequest,
+        response: ReadEventResponse,
+        next: NextFunction,
+    ) => {
+        try {
+            const body = request.body;
+            const query = request.query;
+            const locals = response.locals;
+            const serviceResponse = await this.service.readHaveJoinedEvents(body, query, locals);
+            return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
+        } catch (error) {
+            next(error);
+        }
+    };
+
     private readHaveNotYetJoinedEventsHandler = async (
         request: ReadEventRequest,
         response: ReadEventResponse,
@@ -212,9 +264,9 @@ class EventController implements BaseController {
     ) => {
         try {
             const body = request.body;
-            const locals = response.locals;
             const query = request.query;
-            const serviceResponse = await this.service.readHaveNotYetJoinedEvents(body, locals, query);
+            const locals = response.locals;
+            const serviceResponse = await this.service.readHaveNotYetJoinedEvents(body, query, locals);
             return response.send({ statusCode: 200, message: serviceResponse.message, events: serviceResponse.events });
         } catch (error) {
             next(error);
