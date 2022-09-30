@@ -141,10 +141,10 @@ class EventService implements BaseService {
             let statuses;
             if (filter && filter.eventStatus) statuses = filter.eventStatus.status;
             if (!statuses) statuses = await this.getAllStatus();
-            const statusString = `${this.constructFilterStrings(categories, 'eventStatus')}`;
+            const statusString = `${this.constructFilterStrings(statuses, 'eventStatus')}`;
 
             const eventsAlgolia = await this.index.search<EventAlgolia>(keyword, {
-                facetFilters: [categoryString, statusString],
+                filters: `(${categoryString}) AND (${statusString})`,
             });
             const eventsIDs = eventsAlgolia.hits.map((event) => event.eventID);
             const events = await this.getEventsByEventIDs(eventsIDs);
@@ -885,7 +885,7 @@ class EventService implements BaseService {
     };
 
     private constructFilterStrings = (filters: string[], categoryOrStatus: string) => {
-        const filterStrings = filters.map((filter) => `${categoryOrStatus}:${filter}`);
+        const filterStrings = filters.map((filter) => `${categoryOrStatus}:"${filter}"`);
         return filterStrings.join(' OR ');
     };
 
