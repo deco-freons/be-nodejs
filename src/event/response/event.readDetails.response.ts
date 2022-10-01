@@ -6,7 +6,7 @@ interface ReadEventDetailsResponse<ResBody = ReadEventDetailsResponseBody, Local
 
 interface ReadEventDetailsResponseBody extends BaseResponseBody {
     isEventCreator: boolean;
-    event: EventDetails;
+    event: Partial<EventDetails>;
 }
 
 interface ReadEventDetailsResponseLocals extends BaseLocals {}

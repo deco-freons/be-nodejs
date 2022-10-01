@@ -22,6 +22,7 @@ class EventDetails {
     shortDescription: string;
     description: string;
     eventPrice: Partial<Price>;
+    isEventCreator: boolean;
     eventCreator: User;
     eventImage: Partial<Image>;
     eventStatus: Partial<Status>;
