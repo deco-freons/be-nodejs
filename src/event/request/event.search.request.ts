@@ -1,5 +1,5 @@
 import { BaseRequest, BaseRequestQuery } from '../../common/request/base.request';
-import { SearchEventDTO } from '../dto/event.Search.dto';
+import { SearchEventDTO } from '../dto/event.search.dto';
 
 interface SearchEventRequestQuery extends BaseRequestQuery {
     skip: string;

@@ -195,7 +195,7 @@ class EventService implements BaseService {
 
             let locationData: Partial<Location>;
             if (event.location) locationData = this.constructEventLocationData(event.location);
-            const participants = await this.getEventParticipants(event);
+            const participants = await this.getEventParticipants(event.eventID);
             const participantsList = await this.constructParticipantsData(participants);
             const participated = this.getParticipated(participants, username);
             const eventDetails = await this.constructEventDetailsData(
@@ -563,10 +563,22 @@ class EventService implements BaseService {
         return categories;
     };
 
-    private getEventParticipants = async (event: Event) => {
-        const queryBuilder = this.eventRepository.createQueryBuilder();
-        const participants = await queryBuilder.relation(Event, 'participants').of(event).loadMany();
-        return participants as User[];
+    private getEventParticipants = async (eventID: number) => {
+        const queryBuilder = this.eventRepository.createQueryBuilder('event');
+        const event: Partial<Event> = await queryBuilder
+            .leftJoin('event.participants', 'participants')
+            .leftJoin('participants.userImage', 'user_image')
+            .addSelect([
+                'participants.userID',
+                'participants.username',
+                'participants.firstName',
+                'participants.lastName',
+                'participants.isShareLocation',
+                'user_image.imageUrl',
+            ])
+            .where('event.eventID = :eventID', { eventID: eventID })
+            .getOne();
+        return event.participants as User[];
     };
 
     private getUserJoinedEvents = async (userID: number) => {
@@ -896,7 +908,8 @@ class EventService implements BaseService {
 
     private constructEventData = async (event: Event, longitude: number, latitude: number) => {
         const distance = this.calculateDistanceBetweenUserAndEventLocation(event, longitude, latitude);
-        const participants = await this.getEventParticipants(event);
+        const participants = await this.getEventParticipants(event.eventID);
+        const participantsList = await this.constructParticipantsData(participants);
         const location = this.constructEventLocationData(event.location);
         const eventData: Partial<EventDetails> = {
             eventID: event.eventID,
@@ -915,6 +928,7 @@ class EventService implements BaseService {
             eventImage: event.eventImage,
             eventStatus: event.eventStatus,
             participants: participants.length,
+            participantsList: participantsList,
         };
         return eventData;
     };
@@ -1022,6 +1036,7 @@ class EventService implements BaseService {
             firstName: user.firstName,
             lastName: user.lastName,
             location: locationData,
+            userImage: user.userImage,
             isShareLocation: user.isShareLocation,
         };
         return participantData;
