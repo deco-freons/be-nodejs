@@ -513,6 +513,8 @@ class EventService implements BaseService {
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
@@ -522,6 +524,8 @@ class EventService implements BaseService {
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
             .leftJoin('event.eventStatus', 'event_status')
             .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
             .getMany();
@@ -541,6 +545,8 @@ class EventService implements BaseService {
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
@@ -551,9 +557,12 @@ class EventService implements BaseService {
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
             .leftJoin('event.eventStatus', 'event_status')
             .where('event_categories.category_id IN (:...categories)', { categories: categories })
             .getMany();
+
         return events as Event[];
     };
 
@@ -588,6 +597,8 @@ class EventService implements BaseService {
             .leftJoin('user_joined_event.eventCreator', 'event_creator')
             .leftJoin('user_joined_event.location', 'location')
             .leftJoin('user_joined_event.eventImage', 'event_image')
+            .leftJoin('user_joined_event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
             .leftJoin('user_joined_event.eventStatus', 'event_status')
             .addSelect([
                 'user_joined_event.eventID',
@@ -601,6 +612,8 @@ class EventService implements BaseService {
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
