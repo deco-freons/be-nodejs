@@ -20,7 +20,7 @@ import EventUserDTO from '../dto/event.user.dto';
 import EventUserRequest from '../request/event.user.request';
 import EventImageDTO from '../dto/event.image.dto';
 import EventImageRequest from '../request/event.image.request';
-import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.Search.dto';
+import { SearchEventDTO, SearchEventQueryDTO } from '../dto/event.search.dto';
 import { SearchEventRequest } from '../request/event.search.request';
 import { SearchEventResponse } from '../response/event.search.response';
 import { ReadEventDTO, ReadEventQueryDTO } from '../dto/event.read.dto';
