@@ -346,6 +346,7 @@ class AuthService implements BaseService {
             email: user.email,
             birthDate: user.birthDate,
             location: location,
+            userImage: user.userImage,
             preferences: preferences,
             isVerified: user.isVerified,
             isFirstLogin: user.isFirstLogin,
@@ -372,11 +373,13 @@ class AuthService implements BaseService {
                 'user.email',
                 'user.birthDate',
                 'location.suburb',
+                'user_image.imageUrl',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',
             ])
             .leftJoin('user.location', 'location')
+            .leftJoin('user.userImage', 'user_image')
             .where('user.email = :email', { email: email })
             .orWhere('user.username = :username', { username: username })
             .getOne();
@@ -437,11 +440,13 @@ class AuthService implements BaseService {
                 'user.password',
                 'user.birthDate',
                 'location.suburb',
+                'user_image.imageUrl',
                 'user.isVerified',
                 'user.isFirstLogin',
                 'user.isShareLocation',
             ])
             .leftJoin('user.location', 'location')
+            .leftJoin('user.userImage', 'user_image')
             .where('user.username = :username', { username: username })
             .getOne();
         return user as User;
