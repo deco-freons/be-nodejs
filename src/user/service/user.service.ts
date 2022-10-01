@@ -234,11 +234,15 @@ class UserService implements BaseService {
                 'event.latitude',
                 'categories.preferenceID',
                 'categories.preferenceName',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_image.imageUrl',
             ])
             .leftJoin('event.categories', 'categories')
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
             .where('event.eventCreator = :userID', { userID: userID })
             .getMany();
         return events as Event[];
@@ -335,6 +339,7 @@ class UserService implements BaseService {
             distance: distance,
             longitude: event.longitude,
             latitude: event.latitude,
+            eventPrice: event.eventPrice,
             eventImage: event.eventImage,
         };
         return eventData;

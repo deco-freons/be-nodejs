@@ -148,7 +148,7 @@ class EventService implements BaseService {
             });
             const eventsIDs = eventsAlgolia.hits.map((event) => event.eventID);
             const events = await this.getEventsByEventIDs(eventsIDs);
-            const eventsData = await this.constructEventsData(events, longitude, latitude);
+            const eventsData = await this.constructEventsData(events, longitude, latitude, undefined);
 
             const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
             const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
@@ -175,7 +175,7 @@ class EventService implements BaseService {
             if (filter && filter.eventCategories) categories = filter.eventCategories.category;
             if (!categories) categories = await this.getAllCategoriesID();
             const events = await this.getEventsByCategories(categories);
-            const eventsData = await this.constructEventsData(events, longitude, latitude);
+            const eventsData = await this.constructEventsData(events, longitude, latitude, undefined);
 
             const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
             const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
@@ -336,7 +336,7 @@ class EventService implements BaseService {
             if (!user) throw new NotFoundException('User does not exist.');
 
             const eventsJoined = await this.getUserJoinedEvents(user.userID);
-            const eventsData = await this.constructEventsData(eventsJoined, longitude, latitude);
+            const eventsData = await this.constructEventsData(eventsJoined, longitude, latitude, username);
             const filteredEvents = this.filterEvents(eventsData, filter, undefined);
             const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
 
@@ -369,7 +369,7 @@ class EventService implements BaseService {
             if (!user) throw new NotFoundException('User does not exist.');
 
             const eventsNotJoined = await this.getUserNotJoinedEvents(user.userID);
-            const eventsData = await this.constructEventsData(eventsNotJoined, longitude, latitude);
+            const eventsData = await this.constructEventsData(eventsNotJoined, longitude, latitude, undefined);
             const filteredEvents = this.filterEvents(eventsData, filter, undefined);
             const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
 
@@ -513,6 +513,8 @@ class EventService implements BaseService {
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
@@ -522,6 +524,8 @@ class EventService implements BaseService {
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
             .leftJoin('event.eventStatus', 'event_status')
             .where('event.eventID IN (:...eventIDs)', { eventIDs: [null, ...eventIDs] })
             .getMany();
@@ -541,6 +545,8 @@ class EventService implements BaseService {
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
@@ -551,9 +557,12 @@ class EventService implements BaseService {
             .leftJoin('event.eventCreator', 'event_creator')
             .leftJoin('event.location', 'location')
             .leftJoin('event.eventImage', 'event_image')
+            .leftJoin('event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
             .leftJoin('event.eventStatus', 'event_status')
             .where('event_categories.category_id IN (:...categories)', { categories: categories })
             .getMany();
+
         return events as Event[];
     };
 
@@ -588,6 +597,8 @@ class EventService implements BaseService {
             .leftJoin('user_joined_event.eventCreator', 'event_creator')
             .leftJoin('user_joined_event.location', 'location')
             .leftJoin('user_joined_event.eventImage', 'event_image')
+            .leftJoin('user_joined_event.eventPrice', 'event_price')
+            .leftJoin('event_price.currency', 'currency')
             .leftJoin('user_joined_event.eventStatus', 'event_status')
             .addSelect([
                 'user_joined_event.eventID',
@@ -601,6 +612,8 @@ class EventService implements BaseService {
                 'location.suburb',
                 'location.city',
                 'location.state',
+                'event_price.fee',
+                'currency.currencyShortName',
                 'event_creator.username',
                 'event_creator.firstName',
                 'event_creator.lastName',
@@ -901,12 +914,14 @@ class EventService implements BaseService {
         return filterStrings.join(' OR ');
     };
 
-    private constructEventsData = async (events: Event[], longitude: number, latitude: number) => {
-        const eventsData = events.map(async (event) => await this.constructEventData(event, longitude, latitude));
+    private constructEventsData = async (events: Event[], longitude: number, latitude: number, username: string) => {
+        const eventsData = events.map(
+            async (event) => await this.constructEventData(event, longitude, latitude, username),
+        );
         return Promise.all(eventsData);
     };
 
-    private constructEventData = async (event: Event, longitude: number, latitude: number) => {
+    private constructEventData = async (event: Event, longitude: number, latitude: number, username: string) => {
         const distance = this.calculateDistanceBetweenUserAndEventLocation(event, longitude, latitude);
         const participants = await this.getEventParticipants(event.eventID);
         const participantsList = await this.constructParticipantsData(participants);
@@ -924,6 +939,7 @@ class EventService implements BaseService {
             location: location,
             locationName: event.locationName,
             eventPrice: event.eventPrice,
+            isEventCreator: !username ? undefined : username == event.eventCreator.username,
             eventCreator: event.eventCreator,
             eventImage: event.eventImage,
             eventStatus: event.eventStatus,
@@ -989,7 +1005,7 @@ class EventService implements BaseService {
         participated: boolean,
         location: Partial<Location>,
     ) => {
-        const eventDetailsData: EventDetails = {
+        const eventDetailsData: Partial<EventDetails> = {
             eventID: event.eventID,
             eventName: event.eventName,
             categories: event.categories,
