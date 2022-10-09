@@ -322,6 +322,8 @@ class EventService implements BaseService {
         locals: ReadEventResponseLocals,
     ) => {
         try {
+            const todaysDate = new Date(body.todaysDate);
+
             const begin = parseInt(query.skip) * parseInt(query.take);
             const end = begin + parseInt(query.take);
 
@@ -337,7 +339,7 @@ class EventService implements BaseService {
 
             const eventsJoined = await this.getUserJoinedEvents(user.userID);
             const eventsData = await this.constructEventsData(eventsJoined, longitude, latitude, username);
-            const filteredEvents = this.filterEvents(eventsData, filter, undefined);
+            const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
             const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
 
             return {
