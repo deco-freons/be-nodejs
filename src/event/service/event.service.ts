@@ -861,6 +861,7 @@ class EventService implements BaseService {
         const radiusDTO = filter.eventRadius;
         const daysToEventDTO = filter.daysToEvent;
         const participantsDTO = filter.eventParticipants;
+        const priceDTO = filter.eventPrice;
         const statusDTO = filter.eventStatus;
 
         if (radiusDTO && radiusDTO.radius) {
@@ -882,6 +883,12 @@ class EventService implements BaseService {
                     participantsDTO.participants,
                     participantsDTO.isMoreOrLess,
                 ),
+            );
+        }
+
+        if (priceDTO && priceDTO.price) {
+            filteredEvents = filteredEvents.filter((event) =>
+                this.filterEventsWithinPrice(event, priceDTO.price, priceDTO.isMoreOrLess),
             );
         }
 
@@ -1134,6 +1141,11 @@ class EventService implements BaseService {
     ) => {
         if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.participants >= participants;
         return event.participants <= participants;
+    };
+
+    private filterEventsWithinPrice = (event: Partial<EventDetails>, price: number, isMoreOrLess: string) => {
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.eventPrice.fee >= price;
+        return event.eventPrice.fee <= price;
     };
 
     private filterEventsWithStatus = (event: Partial<EventDetails>, status: string[]) => {
