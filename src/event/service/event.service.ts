@@ -322,6 +322,8 @@ class EventService implements BaseService {
         locals: ReadEventResponseLocals,
     ) => {
         try {
+            const todaysDate = new Date(body.todaysDate);
+
             const begin = parseInt(query.skip) * parseInt(query.take);
             const end = begin + parseInt(query.take);
 
@@ -337,7 +339,7 @@ class EventService implements BaseService {
 
             const eventsJoined = await this.getUserJoinedEvents(user.userID);
             const eventsData = await this.constructEventsData(eventsJoined, longitude, latitude, username);
-            const filteredEvents = this.filterEvents(eventsData, filter, undefined);
+            const filteredEvents = this.filterEvents(eventsData, filter, todaysDate);
             const sortedAndFilteredEvents = this.sortEvents(filteredEvents, sort);
 
             return {
@@ -859,6 +861,7 @@ class EventService implements BaseService {
         const radiusDTO = filter.eventRadius;
         const daysToEventDTO = filter.daysToEvent;
         const participantsDTO = filter.eventParticipants;
+        const priceDTO = filter.eventPrice;
         const statusDTO = filter.eventStatus;
 
         if (radiusDTO && radiusDTO.radius) {
@@ -880,6 +883,12 @@ class EventService implements BaseService {
                     participantsDTO.participants,
                     participantsDTO.isMoreOrLess,
                 ),
+            );
+        }
+
+        if (priceDTO && priceDTO.price) {
+            filteredEvents = filteredEvents.filter((event) =>
+                this.filterEventsWithinPrice(event, priceDTO.price, priceDTO.isMoreOrLess),
             );
         }
 
@@ -1132,6 +1141,11 @@ class EventService implements BaseService {
     ) => {
         if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.participants >= participants;
         return event.participants <= participants;
+    };
+
+    private filterEventsWithinPrice = (event: Partial<EventDetails>, price: number, isMoreOrLess: string) => {
+        if (isMoreOrLess == LOGICAL_OPERATION.MORE) return event.eventPrice.fee >= price;
+        return event.eventPrice.fee <= price;
     };
 
     private filterEventsWithStatus = (event: Partial<EventDetails>, status: string[]) => {
