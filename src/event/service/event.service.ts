@@ -913,6 +913,8 @@ class EventService implements BaseService {
             sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByPopularity(event1, event2, sort));
         } else if (sortBy.toUpperCase() == SORT_BY.DAYS_TO_EVENT) {
             sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByDays(event1, event2, sort));
+        } else if (sortBy.toUpperCase() == SORT_BY.PRICE) {
+            sortedEvents = sortedEvents.sort((event1, event2) => this.sortEventsByPrice(event1, event2, sort));
         }
 
         return sortedEvents;
@@ -1165,6 +1167,11 @@ class EventService implements BaseService {
     private sortEventsByDays = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
         if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.date < event2.date ? 1 : -1;
         return event1.date > event2.date ? 1 : -1;
+    };
+
+    private sortEventsByPrice = (event1: Partial<EventDetails>, event2: Partial<EventDetails>, sort: SortDTO) => {
+        if (sort.isMoreOrLess == LOGICAL_OPERATION.MORE) return event1.eventPrice.fee < event2.eventPrice.fee ? 1 : -1;
+        return event1.eventPrice.fee > event2.eventPrice.fee ? 1 : -1;
     };
 
     private getParticipated = (participants: User[], username: string) => {
