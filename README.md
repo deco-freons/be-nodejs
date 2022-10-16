@@ -96,6 +96,7 @@ Gatherly is a mobile based application, which helps socially isolated young peop
     ```
     http://HOST:PORT
     ```
+4. The database table will be automatically generated, then import all of the data on the `/src/data` directory
 
 ### Building the Project
 
