@@ -539,6 +539,13 @@ class AuthService implements BaseService {
             to: email,
             subject: subject,
             html: html,
+            attachments: [
+                {
+                    filename: 'logo.png',
+                    path: __dirname + EMAIL.IMAGE,
+                    cid: 'logo', //my mistake was putting "cid:logo@cid" here!
+                },
+            ],
         };
         Mailer.sendMail(mailOptions, function (error) {
             if (error) {
